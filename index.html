@@ -14,7 +14,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:
 .sub{font-size:12px;color:var(--mut);line-height:1.4}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .glass{background:var(--panel);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line)}
-#fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s;z-index:90}
+#fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s;z-index:65}
 /* HUD compacto */
 #hud{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:6px;padding:5px 8px;padding-top:max(5px,env(safe-area-inset-top));background:linear-gradient(180deg,rgba(14,8,22,.92),rgba(14,8,22,.55) 80%,transparent);pointer-events:none}
 #hud>*{pointer-events:auto}
@@ -66,16 +66,16 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:
 @keyframes ti{from{opacity:0;transform:translateY(-8px)}}@keyframes to{to{opacity:0}}
 .fl{position:fixed;z-index:35;font-family:'Chakra Petch';font-weight:700;font-size:16px;pointer-events:none;text-shadow:0 2px 6px #000;animation:up 1.8s forwards;transform:translateX(-50%)}
 @keyframes up{to{margin-top:-50px;opacity:0}}
-#sel{position:fixed;inset:0;z-index:80;background:rgba(8,4,14,.8);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center}
+#sel{position:fixed;inset:0;z-index:95;background:rgba(8,4,14,.8);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center}
 #sel .scr{overflow-y:auto;flex:1;width:100%;padding:16px 12px 8px;display:flex;flex-direction:column;align-items:center}
 .cg{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;width:min(980px,100%);margin:12px 0}
 @media(min-width:620px){.cg{grid-template-columns:repeat(4,1fr)}}
 .cc{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:16px;padding:10px;cursor:pointer;text-align:center;touch-action:manipulation}
 .cc.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc),0 0 22px rgba(224,64,160,.45)}
 #selbar{width:100%;padding:10px 12px calc(12px + env(safe-area-inset-bottom));background:rgba(14,8,22,.95);border-top:1px solid var(--line);text-align:center}
-#tut{position:fixed;inset:0;z-index:75;pointer-events:none}
+#tut{position:fixed;inset:0;z-index:85;pointer-events:none}
 .tb{position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));margin:0 auto;max-width:470px;pointer-events:auto;border-radius:20px;padding:14px 14px 12px;border:1px solid var(--acc);box-shadow:0 0 30px rgba(224,64,160,.35)}
-#tring{position:fixed;z-index:74;width:90px;height:90px;margin:-45px 0 0 -45px;border:3px solid var(--acc);border-radius:50%;pointer-events:none;display:none;animation:pr 1.2s infinite}
+#tring{position:fixed;z-index:84;width:90px;height:90px;margin:-45px 0 0 -45px;border:3px solid var(--acc);border-radius:50%;pointer-events:none;display:none;animation:pr 1.2s infinite}
 @keyframes pr{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.5);opacity:0}}
 .hl{outline:2px solid var(--acc2);outline-offset:3px;animation:hp 1s infinite}@keyframes hp{50%{outline-color:transparent}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:9px}
@@ -344,7 +344,7 @@ function buildDistrict(i){
  const D=DIST[i],S=G?G.d[i]:{unlocked:i===0,trust:D.trust},un=S.unlocked;
  const g=new THREE.Group();g.position.set(D.gx*38,0,D.gz*38);scene.add(g);distG[i]=g;
  const rand=mulberry(i*7919+11);
- const tag=m=>{m.userData={kind:'district',di:i};cityClick.push(m)};
+ const tag=m=>{m.userData={kind:'district',di:i};cityClick.push(m);return m};
  tag(box(30,.4,30,M(un?D.col:'#242733',{roughness:.9}),0,.2,0,g,false));
  [[30.6,.5,.7,0,-15.2],[30.6,.5,.7,0,15.2],[.7,.5,30.6,-15.2,0],[.7,.5,30.6,15.2,0]].forEach(a=>box(a[0],a[1],a[2],frameMats[i],a[3],.5,a[4],g,false));
  const cs=[-10.5,-3.5,3.5,10.5];
@@ -359,7 +359,7 @@ function buildDistrict(i){
  const lab=makeLabel(un?D.n:`🔒 ${D.n}\nConfianza ${D.req}+ · ${fmt(D.cost)}`,{w:512,h:128,font:36,scale:[24,6],bg:un?'rgba(14,8,24,.7)':'rgba(90,10,40,.78)'});lab.position.y=un?15:11;g.add(lab);
  if(i===0){
   tintoMat=M('#4a2a63',{emissive:'#7c1d9a',emissiveIntensity:.3});
-  const tg=new THREE.Group();g.add(tg);const tt=m=>{m.userData={kind:'tinto'};cityClick.push(m)};
+  const tg=new THREE.Group();g.add(tg);const tt=m=>{m.userData={kind:'tinto'};cityClick.push(m);return m};
   tt(box(12,9,12,tintoMat,0,4.9,0,tg));tt(box(13,.8,13,M('#2a1a3a'),0,9.6,0,tg));
   const dome=new THREE.Mesh(new THREE.SphereGeometry(4,16,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:'#7ef0e0',transparent:true,opacity:.45,emissive:'#14b8a6',emissiveIntensity:.5}));dome.position.y=10;tg.add(dome);tt(dome);
   const door=new THREE.Mesh(new THREE.PlaneGeometry(2.6,3.6),new THREE.MeshBasicMaterial({color:'#ff5cc0'}));door.position.set(0,2.2,6.05);tg.add(door);tt(door);
@@ -368,7 +368,7 @@ function buildDistrict(i){
   beam=new THREE.Mesh(new THREE.CylinderGeometry(.8,2.4,40,16,1,true),new THREE.MeshBasicMaterial({color:'#d946ef',transparent:true,opacity:.14,blending:THREE.AdditiveBlending,depthWrite:false}));beam.position.y=32;g.add(beam);
   lab.position.y=24;
   // ALMACÉN
-  const wg=new THREE.Group();wg.position.copy(WH_LOCAL);g.add(wg);const wt=m=>{m.userData={kind:'wh'};cityClick.push(m)};
+  const wg=new THREE.Group();wg.position.copy(WH_LOCAL);g.add(wg);const wt=m=>{m.userData={kind:'wh'};cityClick.push(m);return m};
   wt(box(6.4,4.2,6.4,M('#6b4a2a'),0,2.5,0,wg));wt(box(7,.6,7,M('#c2410c'),0,4.9,0,wg));
   wt(box(2.8,3,.2,M('#2a1a10'),0,1.9,3.2,wg));
   wt(box(1.4,1.4,1.4,M('#a16207'),-4.2,1.1,1.5,wg));wt(box(1.2,1.2,1.2,M('#854d0e'),-4.4,.9,3,wg));wt(box(1.4,1.4,1.4,M('#a16207'),4.2,1.1,2,wg));
@@ -379,7 +379,7 @@ function buildDistrict(i){
 function updateFrames(){if(!G)return;for(let i=0;i<9;i++){const S=G.d[i];frameMats[i].color.set(!S.unlocked?'#475569':S.trust<30?'#ef4444':S.trust<60?'#f59e0b':'#22c55e')}}
 function buildZones(){
  ZN.forEach((Z,zi)=>{const g=new THREE.Group();g.position.set(Z.x,0,Z.z);scene.add(g);zoneG[zi]=g;
-  const col=new THREE.Color(Z.col),tg=m=>{m.userData={kind:'zone',i:zi};cityClick.push(m)};
+  const col=new THREE.Color(Z.col),tg=m=>{m.userData={kind:'zone',i:zi};cityClick.push(m);return m};
   tg(cyl(9,9.5,.5,M('#1f1a2b'),0,.15,0,g,24));
   const ring=new THREE.Mesh(new THREE.TorusGeometry(8.6,.25,8,40),new THREE.MeshBasicMaterial({color:col}));ring.rotation.x=Math.PI/2;ring.position.y=.5;g.add(ring);g.userData.ring=ring;
   const rand=mulberry(zi*131+7);
@@ -758,15 +758,15 @@ function updateRing(){const r=$('#tring');const s=tut.active&&TUT[tut.i].ring;if
  const w=s==='tinto'?new V3(0,5,6):new V3(10.5,3,10.5+3.4).add(new V3(0,0,0));const v=w.clone().project(camera);if(v.z>1){r.style.display='none';return}r.style.display='block';r.style.left=(v.x*.5+.5)*innerWidth+'px';r.style.top=(-v.y*.5+.5)*innerHeight+'px'}
 
 /* ====================== SELECCIÓN DE PERSONAJE ====================== */
-function showSelect(){let pick=null;let hasSave=false;try{hasSave=!!localStorage.getItem(SAVE_KEY)}catch(e){}
+function showSelect(){let chosen=null;let hasSave=false;try{hasSave=!!localStorage.getItem(SAVE_KEY)}catch(e){}
  const render=()=>{const sc=$('#sel .scr');const top=sc?sc.scrollTop:0;
  $('#sel').innerHTML=`<div class="scr"><div class="hd" style="font-size:34px;font-weight:700;letter-spacing:.04em">LA <span style="color:var(--acc)">TINTO</span></div><div class="sub" style="margin-top:4px;text-align:center;max-width:460px">Elige quién será el Boss. Si no eliges a Jeilian, él ocupará el rol que dejes vacante.</div>
- <div class="cg">${CHARS.map(c=>`<div class="cc ${pick===c.id?'on':''}" data-c="${c.id}"><div style="width:80px;height:80px;margin:0 auto 6px">${portrait(c)}</div><b class="hd">${c.n}</b><div class="sub" style="color:var(--acc2)">${ROLES[c.role].i} ${ROLES[c.role].s}</div><div class="sub mt-1">${c.desc}</div></div>`).join('')}</div></div>
- <div id="selbar"><div class="sub" style="color:#d6cde4;min-height:34px;margin-bottom:8px">${pick?(pick==='jeilian'?'<b>Jeilian</b> se queda como Boss.':`<b>${charById(pick).n}</b> será el Boss. <b>Jeilian</b> asumirá el puesto de <b>${ROLES[charById(pick).role].n}</b>.`):'Selecciona un personaje.'}</div>
- <div class="row" style="justify-content:center"><button class="btn btn-p" id="goBtn" ${pick?'':'disabled'} style="min-width:180px;min-height:50px;font-size:15px">Empezar como Boss</button>${hasSave?'<button class="btn btn-g" id="loadBtn" style="min-height:50px">Continuar</button>':''}</div></div>`;
+ <div class="cg">${CHARS.map(c=>`<div class="cc ${chosen===c.id?'on':''}" data-c="${c.id}"><div style="width:80px;height:80px;margin:0 auto 6px">${portrait(c)}</div><b class="hd">${c.n}</b><div class="sub" style="color:var(--acc2)">${ROLES[c.role].i} ${ROLES[c.role].s}</div><div class="sub mt-1">${c.desc}</div></div>`).join('')}</div></div>
+ <div id="selbar"><div class="sub" style="color:#d6cde4;min-height:34px;margin-bottom:8px">${chosen?(chosen==='jeilian'?'<b>Jeilian</b> se queda como Boss.':`<b>${charById(chosen).n}</b> será el Boss. <b>Jeilian</b> asumirá el puesto de <b>${ROLES[charById(chosen).role].n}</b>.`):'Selecciona un personaje.'}</div>
+ <div class="row" style="justify-content:center"><button class="btn btn-p" id="goBtn" ${chosen?'':'disabled'} style="min-width:180px;min-height:50px;font-size:15px">Empezar como Boss</button>${hasSave?'<button class="btn btn-g" id="loadBtn" style="min-height:50px">Continuar</button>':''}</div></div>`;
  const s2=$('#sel .scr');if(s2)s2.scrollTop=top;
- $$('.cc').forEach(e=>e.onclick=()=>{pick=e.dataset.c;sfx('click');render()});
- const gb=$('#goBtn');if(gb)gb.onclick=()=>{if(pick)startGame(pick,false)};const lb=$('#loadBtn');if(lb)lb.onclick=()=>startGame(null,true)};
+ $$('.cc').forEach(e=>e.onclick=()=>{chosen=e.dataset.c;sfx('click');render()});
+ const gb=$('#goBtn');if(gb)gb.onclick=()=>{if(chosen)startGame(chosen,false)};const lb=$('#loadBtn');if(lb)lb.onclick=()=>startGame(null,true)};
  render()}
 function startGame(bossId,load){
  if(load){try{G=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){G=null}if(!G||G.v!==2){G=null;toast('No se pudo cargar la partida','bad');return}G.wq=G.wq||[];G.zones=G.zones||ZN.map(()=>({scouted:false}))}else newGame(bossId);
@@ -824,8 +824,10 @@ function updateCity(rdt,t){
  if(tintoMat)tintoMat.emissiveIntensity=.3+Math.sin(t*2)*.12+NF*.2;if(beam)beam.material.opacity=.1+NF*.1+Math.sin(t*1.6)*.03;
  if(selFrame.visible)selFrame.children.forEach(m=>m.scale.y=1+Math.sin(t*4)*.2);
  ZN.forEach((Z,zi)=>{const c=zoneG[zi].userData.crystal;if(c){c.rotation.y=t*.8;c.position.y=3+Z.tier*.4+Math.sin(t*1.5+zi)*.3}})}
-let last=performance.now(),uiT=0,lightT=0;
-function frame(now){requestAnimationFrame(frame);const rdt=Math.min(.1,(now-last)/1000);last=now;const t=now/1000;
+let uiT=0,lightT=0;
+function frame(now){requestAnimationFrame(frame);try{frameBody(now)}catch(e){if(!frame.err){frame.err=1;showFatal(e.message)}}}
+let last=performance.now();
+function frameBody(now){const rdt=Math.min(.1,(now-last)/1000);last=now;const t=now/1000;
  if(G&&started){const paused=tut.active||UI.speed===0,sp=paused?0:UI.speed,sdt=rdt*Math.min(sp,4);
   if(sp>0)simulate(rdt*sp);
   updateInterior(sdt,rdt,t);updateCity(rdt,t);
@@ -835,13 +837,19 @@ function frame(now){requestAnimationFrame(frame);const rdt=Math.min(.1,(now-last
  stepFx(rdt);stepTween(now);updateViewOffset();controls.enabled=!tw&&started&&!busyCam&&!tut.active;if(!tw){controls.update();if(started)clampTarget()}
  renderer.render(scene,camera)}
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();lastVo=-1}
-addEventListener('resize',resize);resize();
+addEventListener('resize',resize);
 
 /* ====================== ARRANQUE ====================== */
-buildCity();buildCityActors();buildInterior();applyMode();
-{const v=cityView();camera.position.copy(v.pos);controls.target.set(0,0,0)}
-showSelect();
-requestAnimationFrame(frame);
+function showFatal(msg){let d=document.getElementById('fatal');if(!d){d=document.createElement('div');d.id='fatal';d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:200;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:40vh;overflow:auto';document.body.appendChild(d)}d.textContent='Error: '+msg}
+window.addEventListener('error',e=>showFatal(e.message+(e.lineno?' (línea '+e.lineno+')':'')));
+window.addEventListener('unhandledrejection',e=>showFatal(String(e.reason)));
+function boot(){
+ if(typeof THREE==='undefined'||!THREE.OrbitControls){showFatal('No se pudo cargar Three.js. Comprueba tu conexión a internet y recarga.');return}
+ buildCity();buildCityActors();buildInterior();applyMode();
+ {const v=cityView();camera.position.copy(v.pos);controls.target.set(0,0,0)}
+ resize();showSelect();
+ requestAnimationFrame(frame)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 </script>
 </body>
 </html>
