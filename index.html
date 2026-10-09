@@ -4,7 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>LA TINTO · Tycoon</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Manejo de errores: los errores "opacos" de scripts de otros dominios (sin archivo ni línea) no son accionables y se ignoran;
+   el resto se registra en la consola. No se muestra ningún banner rojo. */
+window.addEventListener('error',function(e){if(e.message==='Script error.'&&!e.lineno)return;console.error('[La Tinto]',e.message,e.filename||'',e.lineno||'')});
+window.addEventListener('unhandledrejection',function(e){console.error('[La Tinto] promesa rechazada:',e.reason)});
+function __notice(html){var d=document.getElementById('bootmsg');if(!d){d=document.createElement('div');d.id='bootmsg';d.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e0816;color:#f1ecf8;font:15px/1.5 Inter,system-ui,sans-serif;text-align:center;padding:24px';(document.body||document.documentElement).appendChild(d)}
+ d.innerHTML='<div style="font-size:38px;margin-bottom:8px">🗺️</div><div style="max-width:380px">'+html+'</div><button onclick="location.reload()" style="margin-top:18px;min-height:50px;padding:0 26px;border-radius:16px;border:2px solid rgba(255,255,255,.3);background:linear-gradient(180deg,#ff63c3,#a62ad8);color:#fff;font:600 16px Inter,system-ui,sans-serif;cursor:pointer">Reintentar</button>'}
+window.__fatalSoft=function(msg){console.error('[La Tinto]',msg);__notice(msg)};
+window.__bootFail=function(e){console.error('[La Tinto] no se pudo iniciar',e);var m=String(e&&e.message||e);__notice(/webgl/i.test(m)?'Tu navegador no pudo crear el contexto <b>WebGL</b> necesario para el mapa 3D. Cierra otras pestañas o activa la aceleración por hardware y reintenta.':'No se pudo iniciar el mapa 3D. Reintenta; si persiste, recarga con la conexión activa.')};
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0e0816;--panel:rgba(28,16,48,.96);--line:rgba(255,255,255,.13);--acc:#ff4db8;--acc2:#2dd4bf;--ok:#4ade80;--bad:#ff6b88;--warn:#ffb347;--mut:#b8abcc}
@@ -120,17 +129,21 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
 <div id="tut"></div>
 <div id="sel"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+<script>if(!window.THREE){document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"><\/script>')}</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
+<script>if(window.THREE&&!THREE.OrbitControls){document.write('<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"><\/script>')}</script>
 <script>
-'use strict';
+(function(){'use strict';
+if(!(window.THREE&&THREE.OrbitControls)){__fatalSoft('No se pudieron cargar Three.js y OrbitControls desde los CDN. Comprueba tu conexión a internet y reintenta.');return}
+try{
 /* ====================== UTILIDADES ====================== */
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const fmt=n=>Math.round(n).toLocaleString('es-ES')+' €';
 const V3=THREE.Vector3;
-const OFF=600,DAY_LEN=150,PAY_EVERY=7,SAL_MULT=3,SAVE_KEY='latinto_save_v2';
+const OFF=600,DAY_LEN=450,PAY_EVERY=7,SAL_MULT=3,SAVE_KEY='latinto_save_v2';
 const NODES=[-57,-19,19,57];
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 let actx=null;
@@ -140,16 +153,16 @@ function sfx(t){if(UI.mute)return;try{actx=actx||new(window.AudioContext||window
 function polRed(l){return Math.max(.2,1-.08*(l-1))}
 const ROLES={
  boss:{n:'Boss',s:'Boss',i:'👑',base:0,d:'Dirige la organización y permanece siempre en La Tinto.'},
- regador:{n:'Regador',s:'Regador',i:'💧',base:30,d:'Riega las plantas solo. Más nivel: riega más rápido y mejora la calidad.'},
- vendedor:{n:'Vendedor / Negociador',s:'Vendedor',i:'🤝',base:40,d:'Mejora el precio y la cantidad que se vende en cada reparto.'},
- buscador:{n:'Buscador de Objetos',s:'Buscador',i:'🔎',base:35,d:'Sale en coche a las zonas de búsqueda. Más nivel: más hallazgos y más suerte con lo raro.'},
- repartidor:{n:'Conductor de reparto',s:'Repartidor',i:'🚚',base:35,d:'Lleva la mercancía en coche. Más nivel: entregas más rápidas.'},
- policia:{n:'Evitador de policía',s:'Anti-poli',i:'🚓',base:45,d:'Reduce el riesgo policial durante los repartos.'},
- ojeador:{n:'Ojeador de Barrios',s:'Ojeador',i:'👁',base:30,d:'Ojea barrios y zonas de búsqueda a pie. Sube la confianza de los barrios.'},
- conductor:{n:'Conductor de búsqueda',s:'Chófer',i:'🚗',base:35,d:'Conduce el coche de las búsquedas. Más nivel: trayectos más rápidos.'},
- cosechador:{n:'Cosechador',s:'Cosechador',i:'🌾',base:30,d:'Cosecha y replanta. Más nivel: más rendimiento y mejor calidad.'},
- tecnico:{n:'Técnico de Laboratorio',s:'Técnico',i:'⚗️',base:45,d:'Procesa las recetas del laboratorio. Más nivel: menos tiempo y recetas avanzadas.'},
- asaltante:{n:'Asaltante / Infiltrado',s:'Asaltante',i:'🥷',base:40,d:'Asalta bandas rivales en moto. Si falla en zona hostil, Alejo puede ser secuestrado.'}
+ regador:{n:'Regador',s:'Regador',i:'💧',base:21,d:'Riega las plantas solo. Más nivel: riega más rápido y mejora la calidad.'},
+ vendedor:{n:'Vendedor / Negociador',s:'Vendedor',i:'🤝',base:28,d:'Mejora el precio y la cantidad que se vende en cada reparto.'},
+ buscador:{n:'Buscador de Objetos',s:'Buscador',i:'🔎',base:24.5,d:'Sale en coche a las zonas de búsqueda. Más nivel: más hallazgos y más suerte con lo raro.'},
+ repartidor:{n:'Conductor de reparto',s:'Repartidor',i:'🚚',base:24.5,d:'Lleva la mercancía en coche. Más nivel: entregas más rápidas.'},
+ policia:{n:'Evitador de policía',s:'Anti-poli',i:'🚓',base:31.5,d:'Reduce el riesgo policial durante los repartos.'},
+ ojeador:{n:'Ojeador de Barrios',s:'Ojeador',i:'👁',base:21,d:'Ojea barrios y zonas de búsqueda a pie. Sube la confianza de los barrios.'},
+ conductor:{n:'Conductor de búsqueda',s:'Chófer',i:'🚗',base:24.5,d:'Conduce el coche de las búsquedas. Más nivel: trayectos más rápidos.'},
+ cosechador:{n:'Cosechador',s:'Cosechador',i:'🌾',base:21,d:'Cosecha y replanta. Más nivel: más rendimiento y mejor calidad.'},
+ tecnico:{n:'Técnico de Laboratorio',s:'Técnico',i:'⚗️',base:31.5,d:'Procesa las recetas del laboratorio. Más nivel: menos tiempo y recetas avanzadas.'},
+ asaltante:{n:'Asaltante / Infiltrado',s:'Asaltante',i:'🥷',base:28,d:'Asalta bandas rivales en moto. Si falla en zona hostil, Alejo puede ser secuestrado.'}
 };
 const ROLE_ORDER=['boss','regador','cosechador','tecnico','buscador','conductor','repartidor','vendedor','policia','ojeador','asaltante'];
 const effText=(r,l)=>({
@@ -203,29 +216,29 @@ const ZN=[
  {n:'Bosque de la Luna',x:-6,z:98,tier:4,cost:350,col:'#c084fc',pool:{violeta:32,ambar:30,carmesi:20,lunar:15,solv:3}}];
 /* Recetario: procesos técnicos (reales) y combinaciones exóticas (ficticias). Solo mecánicas de juego. */
 const REC=[
- {id:'rosin',n:'Rosin',kind:'real',minLvl:1,time:240,herb:4,ing:{press:1},mult:2.2},
- {id:'hash',n:'Hachís al agua',kind:'real',minLvl:1,time:280,herb:5,ing:{ice:2},mult:2.0},
- {id:'resin',n:'Resina en frío',kind:'real',minLvl:2,time:360,herb:4,ing:{ice:1,solv:1},mult:2.7},
- {id:'cbd',n:'Aceite CBD',kind:'real',minLvl:2,time:440,herb:6,ing:{solv:1,oil:2},mult:2.9},
- {id:'thc',n:'Aceite THC',kind:'real',minLvl:3,time:520,herb:6,ing:{solv:2,oil:2},mult:3.4},
- {id:'dist',n:'Destilado',kind:'real',minLvl:4,time:680,herb:6,ing:{solv:2,press:1},mult:4.6},
- {id:'shat',n:'Extracción con solvente',kind:'real',minLvl:5,time:840,herb:8,ing:{solv:3,press:1},mult:5.6},
- {id:'lunar',n:'Esencia Lunar',kind:'exotica',minLvl:2,time:400,herb:4,ing:{lunar:2,oil:1},mult:3.4},
- {id:'carm',n:'Elixir Carmesí',kind:'exotica',minLvl:3,time:560,herb:5,ing:{carmesi:2,solv:1},mult:4.8},
- {id:'ambar',n:'Ámbar Puro',kind:'exotica',minLvl:5,time:800,herb:6,ing:{ambar:2,press:1},mult:7.5},
- {id:'viol',n:'Néctar Violeta',kind:'exotica',minLvl:6,time:1040,herb:6,ing:{violeta:2,oil:2},mult:10.5},
- {id:'arc',n:'Elixir Arcano',kind:'exotica',minLvl:8,time:1360,herb:8,ing:{lunar:1,carmesi:1,ambar:1,violeta:1},mult:17}];
+ {id:'rosin',n:'Rosin',kind:'real',minLvl:1,time:90,herb:4,ing:{press:1},mult:2.2},
+ {id:'hash',n:'Hachís al agua',kind:'real',minLvl:1,time:105,herb:5,ing:{ice:2},mult:2.0},
+ {id:'resin',n:'Resina en frío',kind:'real',minLvl:2,time:135,herb:4,ing:{ice:1,solv:1},mult:2.7},
+ {id:'cbd',n:'Aceite CBD',kind:'real',minLvl:2,time:165,herb:6,ing:{solv:1,oil:2},mult:2.9},
+ {id:'thc',n:'Aceite THC',kind:'real',minLvl:3,time:195,herb:6,ing:{solv:2,oil:2},mult:3.4},
+ {id:'dist',n:'Destilado',kind:'real',minLvl:4,time:255,herb:6,ing:{solv:2,press:1},mult:4.6},
+ {id:'shat',n:'Extracción con solvente',kind:'real',minLvl:5,time:315,herb:8,ing:{solv:3,press:1},mult:5.6},
+ {id:'lunar',n:'Esencia Lunar',kind:'exotica',minLvl:2,time:150,herb:4,ing:{lunar:2,oil:1},mult:3.4},
+ {id:'carm',n:'Elixir Carmesí',kind:'exotica',minLvl:3,time:210,herb:5,ing:{carmesi:2,solv:1},mult:4.8},
+ {id:'ambar',n:'Ámbar Puro',kind:'exotica',minLvl:5,time:300,herb:6,ing:{ambar:2,press:1},mult:7.5},
+ {id:'viol',n:'Néctar Violeta',kind:'exotica',minLvl:6,time:390,herb:6,ing:{violeta:2,oil:2},mult:10.5},
+ {id:'arc',n:'Elixir Arcano',kind:'exotica',minLvl:8,time:510,herb:8,ing:{lunar:1,carmesi:1,ambar:1,violeta:1},mult:17}];
 const recOf=id=>REC.find(r=>r.id===id);
 const DIST=[
- {n:'Centro · La Tinto',gx:0,gz:0,price:.9,gang:.2,loot:.5,req:0,cost:0,trust:70,col:'#3a2a4f',rival:'—'},
- {n:'Las Eras',gx:1,gz:0,price:1.1,gang:.7,loot:.8,req:35,cost:600,trust:18,col:'#2f3b45',rival:'Los Cuervos'},
- {n:'Casco Viejo',gx:-1,gz:0,price:1.2,gang:.8,loot:.9,req:35,cost:700,trust:15,col:'#4a3a3a',rival:'Clan del Arco'},
- {n:'El Páramo',gx:0,gz:-1,price:1.15,gang:.75,loot:.85,req:38,cost:650,trust:20,col:'#3c4636',rival:'Los Gatos'},
- {n:'Polígono Sur',gx:0,gz:1,price:1.05,gang:.9,loot:1,req:38,cost:750,trust:12,col:'#35363f',rival:'La Hermandad'},
- {n:'Puerto Seco',gx:1,gz:-1,price:1.5,gang:1.1,loot:1.3,req:50,cost:1600,trust:10,col:'#2c3f4f',rival:'Los Tiburones'},
- {n:'La Ribera',gx:-1,gz:-1,price:1.55,gang:1.15,loot:1.35,req:50,cost:1700,trust:8,col:'#2f4a45',rival:'Hijos del Río'},
- {n:'Los Olmos',gx:1,gz:1,price:1.6,gang:1.2,loot:1.4,req:52,cost:1800,trust:9,col:'#45402c',rival:'Clan Olmedo'},
- {n:'Las Cumbres',gx:-1,gz:1,price:1.7,gang:1.3,loot:1.5,req:55,cost:2000,trust:6,col:'#43304a',rival:'Los Altos'}];
+ {n:'El Páramo · La Tinto',gx:0,gz:0,price:.9,gang:.2,loot:.5,req:0,cost:0,trust:70,col:'#3a2a4f',rival:'—'},
+ {n:'Valencia de Don Juan',gx:1,gz:0,price:1.1,gang:.7,loot:.8,req:35,cost:600,trust:18,col:'#2f3b45',rival:'Los Cuervos'},
+ {n:'La Bañeza',gx:-1,gz:0,price:1.2,gang:.8,loot:.9,req:35,cost:700,trust:15,col:'#4a3a3a',rival:'Clan del Arco'},
+ {n:'La Ribera',gx:0,gz:-1,price:1.15,gang:.75,loot:.85,req:38,cost:650,trust:20,col:'#3c4636',rival:'Los Gatos'},
+ {n:'Benavente',gx:0,gz:1,price:1.05,gang:.9,loot:1,req:38,cost:750,trust:12,col:'#35363f',rival:'La Hermandad'},
+ {n:'León',gx:1,gz:-1,price:1.5,gang:1.1,loot:1.3,req:50,cost:1600,trust:10,col:'#2c3f4f',rival:'Los Tiburones'},
+ {n:'El Órbigo',gx:-1,gz:-1,price:1.55,gang:1.15,loot:1.35,req:50,cost:1700,trust:8,col:'#2f4a45',rival:'Hijos del Río'},
+ {n:'Laguna de Negrillos',gx:1,gz:1,price:1.6,gang:1.2,loot:1.4,req:52,cost:1800,trust:9,col:'#45402c',rival:'Clan Olmedo'},
+ {n:'Río Piedras',gx:-1,gz:1,price:1.7,gang:1.3,loot:1.5,req:55,cost:2000,trust:6,col:'#43304a',rival:'Los Altos'}];
 
 /* ====================== ESTADO ====================== */
 let G=null,UI={strain:'verdina',ls:'verdina',ln:1,lt:'make',selD:null,speed:1,mute:false,dirty:true,deliv:null,press:false};
@@ -239,7 +252,7 @@ function newGame(bossId){
  const level={};CHARS.forEach(c=>level[c.id]=1);
  G={v:2,boss:bossId,roleOf,level,money:1500,day:1,tod:.33,rep:3,heat:0,owed:0,lastPay:1,plotCount:3,
   plots:Array.from({length:12},()=>({state:'empty',strain:null,growth:0,water:0,qAcc:0,quality:0})),
-  inv:{goods:{},ing:{solv:2,oil:2,ice:2,press:2,lunar:1}},disc:{},queue:[],labTables:1,tabs:[null,null,null],missions:[],kidnap:null,auto:true,tutDone:false,
+  inv:{goods:{},ing:{solv:2,oil:2,ice:2,press:2,lunar:1}},disc:{},queue:[],labTables:1,tabs:[null,null,null],brk:{},missions:[],kidnap:null,auto:true,tutDone:false,
   zones:ZN.map(()=>({scouted:false})),wq:[],wqOn:true,wqWait:false,
   d:DIST.map(x=>({trust:x.trust,unlocked:x.req===0,scouted:x.req===0})),stats:{delivered:0,earned:0}};
  for(let i=0;i<2;i++){const p=G.plots[i];p.state='growing';p.strain='verdina';p.water=60}
@@ -298,7 +311,7 @@ const hemi=new THREE.HemisphereLight(0xbfd8ff,0x20243a,.6);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffffff,1);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
 {const s=sun.shadow.camera;s.left=-85;s.right=85;s.top=85;s.bottom=-85;s.near=1;s.far=320;sun.shadow.bias=-.0005;sun.shadow.radius=3}
 scene.add(sun,sun.target);
-const room=new THREE.DirectionalLight(0xffe2c0,0);room.position.set(OFF+2,60,6);room.target.position.set(OFF,0,0);room.castShadow=true;room.shadow.mapSize.set(1024,1024);
+const room=new THREE.DirectionalLight(0xffe2c0,0);room.position.set(OFF+10,56,14);room.target.position.set(OFF,0,0);room.castShadow=true;room.shadow.mapSize.set(1024,1024);
 {const s=room.shadow.camera;s.left=-34;s.right=34;s.top=20;s.bottom=-20;s.near=1;s.far=140;room.shadow.bias=-.0008}
 scene.add(room,room.target);
 const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8,metalness:.05},o));
@@ -349,7 +362,7 @@ function buildCity(){
  ['#8da2c8','#c79aa8','#9ac7a5','#d1b27e','#8a8fd6','#cf8f7a','#7fb7c9','#b9a0d9'].forEach(c=>bMats.push(new THREE.MeshStandardMaterial({map:fa,color:c,emissive:0xffd9a0,emissiveMap:fe,emissiveIntensity:.2,roughness:.85})));
  lockM=new THREE.MeshStandardMaterial({map:fa,color:'#4a4d5a',emissive:0x000000,roughness:.95});roofM=M('#3a3f50');
  lampM=new THREE.MeshStandardMaterial({color:'#ffe9b0',emissive:'#ffe9b0',emissiveIntensity:.2});
- const gr=new THREE.Mesh(new THREE.PlaneGeometry(900,900),M('#120d1b',{roughness:1}));gr.rotation.x=-Math.PI/2;gr.position.y=-.3;gr.receiveShadow=true;scene.add(gr);
+ const gr=new THREE.Mesh(new THREE.PlaneGeometry(900,900),M('#24402a',{roughness:1}));gr.rotation.x=-Math.PI/2;gr.position.y=-.3;gr.receiveShadow=true;scene.add(gr);
  box(132,.2,132,M('#1d1b2a',{roughness:.95}),0,-.1,0,scene,false);
  const lm=new THREE.MeshBasicMaterial({map:dashTex(),transparent:true});
  NODES.forEach(v=>{const a=new THREE.Mesh(new THREE.PlaneGeometry(130,.5),lm);a.rotation.x=-Math.PI/2;a.position.set(0,.04,v);scene.add(a);
@@ -361,7 +374,28 @@ function buildCity(){
  // estrellas
  const pos=new Float32Array(900);for(let i=0;i<300;i++){const a=Math.random()*Math.PI*2,e=Math.random()*1.3+.12,r=700;pos[i*3]=Math.cos(a)*Math.cos(e)*r;pos[i*3+1]=Math.sin(e)*r;pos[i*3+2]=Math.sin(a)*Math.cos(e)*r}
  const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(pos,3));stars=new THREE.Points(sg,new THREE.PointsMaterial({color:'#ffffff',size:2.2,sizeAttenuation:false,transparent:true,opacity:0,depthWrite:false,fog:false}));scene.add(stars);
- buildZones()}
+ buildZones();buildForest()}
+function distSeg(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;let t=((px-ax)*dx+(pz-az)*dz)/l2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),pz-(az+t*dz))}
+/* Bosque denso alrededor de la ciudad: pinos, árboles de hoja y rocas con InstancedMesh (barato de dibujar) */
+function buildForest(){
+ const rand=mulberry(424242),dummy=new THREE.Object3D(),col=new THREE.Color();
+ const segs=ZN.map(Z=>{const nn=nearestNode(new V3(Z.x,0,Z.z));return[nn.x,nn.z,Z.x,Z.z]});
+ const clear=(x,z)=>{if(Math.abs(x)<69&&Math.abs(z)<69)return false;for(const n of segs){if(Math.hypot(x-n[2],z-n[3])<14)return false;if(distSeg(x,z,n[0],n[1],n[2],n[3])<4.5)return false}return true};
+ const NP=1200,ND=600,NR=360;
+ const trunkG=new THREE.CylinderGeometry(.3,.45,2.6,6),c1=new THREE.ConeGeometry(2.4,5,7),c2=new THREE.ConeGeometry(1.7,4,7),crownG=new THREE.IcosahedronGeometry(2.4,0),rockG=new THREE.DodecahedronGeometry(1,0);
+ const mTrunk=new THREE.MeshStandardMaterial({color:'#5a3d28',roughness:1}),mLeaf=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.9}),mRock=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true});
+ const pT=new THREE.InstancedMesh(trunkG,mTrunk,NP),pA=new THREE.InstancedMesh(c1,mLeaf,NP),pB=new THREE.InstancedMesh(c2,mLeaf,NP),dT=new THREE.InstancedMesh(trunkG,mTrunk,ND),dC=new THREE.InstancedMesh(crownG,mLeaf,ND),rk=new THREE.InstancedMesh(rockG,mRock,NR);
+ const pines=['#1f5a34','#256b3a','#1b4d2e','#2a7040'],leaves=['#3f8f3a','#4ea63f','#5fae45','#c7842c'],rocks=['#6b7280','#7c8794','#5b6370'];
+ const put=(m,i,x,y,z,sx,sy,sz,ry)=>{dummy.position.set(x,y,z);dummy.rotation.set(0,ry,0);dummy.scale.set(sx,sy,sz);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)};
+ let np=0,nd=0,nr=0,tries=0;
+ while((np<NP||nd<ND||nr<NR)&&tries++<60000){
+  const x=(rand()*2-1)*330,z=(rand()*2-1)*330;if(!clear(x,z))continue;
+  const r=Math.max(Math.abs(x),Math.abs(z));if(rand()>Math.min(1,.3+(r-69)/120))continue;
+  const k=rand(),s=.8+rand()*.9,ry=rand()*6.28;
+  if(k<.55){if(np>=NP)continue;put(pT,np,x,1.3*s,z,s,s,s,ry);put(pA,np,x,4.7*s,z,s,s,s,ry);put(pB,np,x,7*s,z,s,s,s,ry);col.set(pines[Math.floor(rand()*4)]);pA.setColorAt(np,col);pB.setColorAt(np,col);np++}
+  else if(k<.85){if(nd>=ND)continue;put(dT,nd,x,1.3*s,z,s*.9,s,s*.9,ry);put(dC,nd,x,3.9*s,z,s,s*.85,s,ry);col.set(leaves[Math.floor(rand()*4)]);dC.setColorAt(nd,col);nd++}
+  else{if(nr>=NR)continue;put(rk,nr,x,.4*s,z,s*1.2,s*.8,s,ry);col.set(rocks[Math.floor(rand()*3)]);rk.setColorAt(nr,col);nr++}}
+ [[pT,np],[pA,np],[pB,np],[dT,nd],[dC,nd],[rk,nr]].forEach(a=>{const m=a[0];m.count=a[1];m.frustumCulled=false;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;scene.add(m)})}
 function buildDistrict(i){
  bobs=bobs.filter(b=>b.di!==i);const old=distG[i];if(old){scene.remove(old);cityClick=cityClick.filter(m=>m.userData.di!==i&&!(m.userData.kind==='wh'&&i===0)&&!(m.userData.kind==='tinto'&&i===0))}
  const D=DIST[i],S=G?G.d[i]:{unlocked:i===0,trust:D.trust},un=S.unlocked;
@@ -458,21 +492,9 @@ const LABT=[[19.5,-8.5],[19.5,-2.5],[19.5,3.5]];
 const labStand=k=>[LABT[k][0],LABT[k][1]+2.7];
 const TABCOST=[0,1000,5000];
 let labTabs=[];
-function avatarTex(c){const cv=document.createElement('canvas');cv.width=cv.height=128;const g=cv.getContext('2d');
- g.fillStyle=c.shirt;g.beginPath();g.ellipse(64,76,Math.min(52,40+c.w*10),30,0,0,Math.PI*2);g.fill();g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=3;g.stroke();
- if(c.style==='long'){g.fillStyle=c.hair;g.beginPath();g.ellipse(64,64,32,36,0,0,Math.PI*2);g.fill()}
- const hr=c.style==='vshort'?23:26;g.fillStyle=c.hair;g.beginPath();g.arc(64,62,hr,0,Math.PI*2);g.fill();
- g.fillStyle=c.skin;g.beginPath();g.ellipse(64,c.style==='vshort'?72:71,hr-6,hr-8,0,0,Math.PI*2);g.fill();
- if(c.acc==='cap'){g.fillStyle='#1f2937';g.beginPath();g.arc(64,62,hr+1,0,Math.PI*2);g.fill();g.fillStyle='#111827';g.fillRect(48,84,32,10);g.fillStyle=c.skin;g.beginPath();g.ellipse(64,80,12,6,0,0,Math.PI*2);g.fill()}
- g.fillStyle='#111';if(c.acc==='glasses'){g.strokeStyle='#0a0a10';g.lineWidth=3;g.beginPath();g.arc(55,78,6,0,Math.PI*2);g.stroke();g.beginPath();g.arc(73,78,6,0,Math.PI*2);g.stroke();g.beginPath();g.moveTo(61,78);g.lineTo(67,78);g.stroke()}
- else if(c.acc!=='cap'){g.beginPath();g.arc(56,78,2.4,0,Math.PI*2);g.fill();g.beginPath();g.arc(72,78,2.4,0,Math.PI*2);g.fill()}
- return new THREE.CanvasTexture(cv)}
-function buildAvatar(c){const g=new THREE.Group(),body=new THREE.Group(),r=1.05*(.9+.18*c.w+.1*(c.h-.9)),Y=1.3;g.add(body);
- const sh=new THREE.Mesh(new THREE.CircleGeometry(r*1.08,20),new THREE.MeshBasicMaterial({color:'#000',transparent:true,opacity:.38,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.set(.14,Y-.06,.16);g.add(sh);
- const ring=new THREE.Mesh(new THREE.CircleGeometry(r*1.04,24),new THREE.MeshBasicMaterial({color:c.shirt}));ring.rotation.x=-Math.PI/2;ring.position.y=Y-.02;body.add(ring);
- const disc=new THREE.Mesh(new THREE.CircleGeometry(r*.94,24),new THREE.MeshBasicMaterial({color:'#1a1028'}));disc.rotation.x=-Math.PI/2;disc.position.y=Y;body.add(disc);
- const fm=new THREE.Mesh(new THREE.PlaneGeometry(r*2,r*2),new THREE.MeshBasicMaterial({map:avatarTex(c),transparent:true,depthWrite:false}));fm.rotation.x=-Math.PI/2;fm.position.y=Y+.02;body.add(fm);
- const L=makeLabel('',{scale:[3.4,1],font:28});L.position.set(0,Y+.3,r+1.2);g.add(L);g.userData.label=L;g.userData.body=body;return g}
+function buildAvatar(c){const g=new THREE.Group(),h=buildHuman(c,1.2,{scale:[3.2,.95]});g.add(h);
+ const hit=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,2.8,10),new THREE.MeshBasicMaterial({visible:false}));hit.position.y=1.4;g.add(hit);
+ const L=h.userData.label;L.position.set(0,.9,-1.9);g.userData.label=L;g.userData.body=h;return g}
 function buildInterior(){
  const edge=M('#2a2040');
  box(52,.4,26,M('#2b2234',{roughness:.7}),0,-.2,0,I);
@@ -523,6 +545,8 @@ function placeChars(){CHARS.forEach(c=>{const o=ich[c.id],role=G.roleOf[c.id];co
 const atPos=(id,p,r=.5)=>{const o=ich[id];return o.vis&&Math.hypot(o.g.position.x-p[0],o.g.position.z-p[1])<r};
 
 /* ====================== SIMULACIÓN ====================== */
+const BRK=r=>r==='regador'||r==='cosechador'?0:20;
+const restMsg=roles=>{for(const r of roles){const c=roleChar(r);if((G.brk[c.id]||0)>0)return `${c.n} está descansando (${Math.ceil(G.brk[c.id])} s)`}return ''};
 function rescueOK(){return G.money<STR[0].seed&&Object.keys(G.inv.goods).length===0&&!G.plots.some((q,k)=>k<G.plotCount&&q.state==='ready')}
 function plantPlot(i,sid){const p=G.plots[i],S=strOf(sid);if(p.state!=='empty')return false;
  if(rescueOK()){Object.assign(p,{state:'growing',strain:'verdina',growth:0,water:55,qAcc:0,quality:0});toast('🆘 Rescate: semilla de Verdina gratis para que no te quedes bloqueado','ok');markDirty();return true}if(G.rep<S.rep){toast(`${S.n} requiere reputación ${S.rep}`,'bad');return false}if(G.money<S.seed){toast('No hay dinero para la semilla','bad');return false}
@@ -534,32 +558,35 @@ function harvestPlot(i,auto){const p=G.plots[i];if(p.state!=='ready')return;cons
  if(auto&&G.auto&&G.money>=S.seed&&G.rep>=S.rep)plantPlot(i,sid);markDirty()}
 const plotWorld=i=>new V3(OFF+PLOT[i][0],2.5,PLOT[i][1]);
 const plotCost=()=>Math.round(250*Math.pow(1.5,G.plotCount-3));
-function launchExpedition(zi){const Z=ZN[zi];if(G.money<Z.cost)return false;G.money-=Z.cost;
+function launchExpedition(zi){if(restMsg(['buscador','conductor']))return false;const Z=ZN[zi];if(G.money<Z.cost)return false;G.money-=Z.cost;
  const sp=1+.14*(lvl('conductor')-1),w=(70+Z.tier*25)/(1+.1*(lvl('buscador')-1));
  startMission({type:'expedition',role:'buscador',chars:[roleChar('buscador').id,roleChar('conductor').id],dest:zpos(zi),speed:4.5*sp,wait:w,data:{z:zi},txt:'Búsqueda'});
  toast(`🚗 ${nm('buscador')} y ${nm('conductor')} salen hacia ${Z.n}`);return true}
 function simulate(dt){
  G.tod+=dt/DAY_LEN;if(G.tod>=1){G.tod-=1;G.day++;onNewDay()}
+ for(const id in G.brk)if(G.brk[id]>0)G.brk[id]=Math.max(0,G.brk[id]-dt);
  const wl=lvl('regador'),ef=eff();
  G.plots.forEach((p,i)=>{if(i>=G.plotCount||p.state!=='growing')return;const S=strOf(p.strain);p.water=Math.max(0,p.water-.6*dt);
   if(p.water>0){const g=dt/S.time;p.growth+=g;p.qAcc+=(p.water>25?1:.25)*g}
   if(p.growth>=1){p.growth=1;p.state='ready';p.quality=clamp(30+60*(p.qAcc/p.growth)+(wl-1)*1.5,20,100);markDirty()}});
  // regador: camina hasta la parcela y luego riega
  const rc=roleChar('regador');let j=jobs.regador;
- if(j){const p=G.plots[j.i];if(p.state!=='growing')jobs.regador=null;else if(j.st==='walk'){if(atPos(rc.id,j.p)){j.st='act';j.t=Math.max(1.5,6-.4*(wl-1))}}else{j.t-=dt*ef;if(j.t<=0){p.water=Math.min(100,p.water+75);jobs.regador=null;markDirty()}}}
- else{let best=-1,bw=45;for(let i=0;i<G.plotCount;i++){const p=G.plots[i];if(p.state==='growing'&&p.water<bw){bw=p.water;best=i}}if(best>=0)jobs.regador={i:best,st:'walk',p:plotStand(best,'regador'),t:0}}
+ if(j){const p=G.plots[j.i];if(p.state!=='growing')jobs.regador=null;else if(j.st==='walk'){if(atPos(rc.id,j.p)){j.st='act';j.t=Math.max(1.5,6-.4*(wl-1))}}else{j.t-=dt*ef;if(j.t<=0){p.water=Math.min(100,p.water+75);jobs.regador=null;G.brk[rc.id]=BRK('regador');markDirty()}}}
+ else if(!(G.brk[rc.id]>0)){let best=-1,bw=45;for(let i=0;i<G.plotCount;i++){const p=G.plots[i];if(p.state==='growing'&&p.water<bw){bw=p.water;best=i}}if(best>=0)jobs.regador={i:best,st:'walk',p:plotStand(best,'regador'),t:0}}
  // cosechador
  const cc=roleChar('cosechador'),cl=lvl('cosechador');j=jobs.cosechador;
- if(j){const p=G.plots[j.i];if(p.state!=='ready')jobs.cosechador=null;else if(j.st==='walk'){if(atPos(cc.id,j.p)){j.st='act';j.t=Math.max(2,8-.6*(cl-1))}}else{j.t-=dt*ef;if(j.t<=0){harvestPlot(j.i,true);jobs.cosechador=null}}}
- else{for(let i=0;i<G.plotCount;i++)if(G.plots[i].state==='ready'){jobs.cosechador={i,st:'walk',p:plotStand(i,'cosechador'),t:0};break}}
+ if(j){const p=G.plots[j.i];if(p.state!=='ready')jobs.cosechador=null;else if(j.st==='walk'){if(atPos(cc.id,j.p)){j.st='act';j.t=Math.max(2,8-.6*(cl-1))}}else{j.t-=dt*ef;if(j.t<=0){harvestPlot(j.i,true);jobs.cosechador=null;G.brk[cc.id]=BRK('cosechador')}}}
+ else if(!(G.brk[cc.id]>0)){for(let i=0;i<G.plotCount;i++)if(G.plots[i].state==='ready'){jobs.cosechador={i,st:'walk',p:plotStand(i,'cosechador'),t:0};break}}
  // técnico: varias mesas en paralelo; solo avanzan si Izan está en la zona del laboratorio
  {const tl=lvl('tecnico'),izo=ich[roleChar('tecnico').id],inLab=izo.vis&&izo.g.position.x>13.2;
-  for(let k=0;k<G.labTables;k++){if(!G.tabs[k]&&G.queue.length){G.tabs[k]=G.queue.shift();markDirty()}
+  /* nueva tanda: solo cuando todas las mesas están libres e Izan no descansa; una receta por mesa desbloqueada */
+  if(!G.tabs.some(Boolean)&&G.queue.length&&!(G.brk[roleChar('tecnico').id]>0)){for(let k=0;k<G.labTables&&G.queue.length;k++)G.tabs[k]=G.queue.shift();markDirty()}
+  for(let k=0;k<G.labTables;k++){
    const q=G.tabs[k];if(!q||!inLab)continue;const R=recOf(q.r);q.p+=dt*ef*(1+.2*(tl-1))/(R.time*q.b);
    if(q.p>=1){const key=q.s+'|'+q.r,qual=clamp(q.q+(tl-1)*.5,0,100);addGoods(key,q.n,qual);
     const first=!G.disc[q.r];const d=G.disc[q.r]||(G.disc[q.r]={n:0,best:0});d.n+=q.b;d.best=Math.max(d.best,qual);
     if(first){G.rep=Math.min(100,G.rep+1.5);toast(`📖 ¡Receta descubierta: <b>${R.n}</b>! Guardada en el recetario.`,'ok')}else toast(`${nm('tecnico')} termina ${q.n}× ${goodName(key)}`,'ok');
-    G.tabs[k]=null;sfx('up');markDirty()}}}
+    G.tabs[k]=null;if(!G.tabs.some(Boolean))G.brk[roleChar('tecnico').id]=BRK('tecnico');sfx('up');markDirty()}}}
  // cola automática del almacén
  if(G.wqOn&&G.wq.length&&!missionOf('buscador')){const o=G.wq[0],Z=ZN[o.z];
   if(G.money>=Z.cost){G.wqWait=false;if(launchExpedition(o.z)){if(o.n>0){o.n--;if(o.n===0)G.wq.shift()}markDirty()}}
@@ -569,7 +596,7 @@ function simulate(dt){
   if(m.pre){m.preT+=dt;if(m.chars.every(id=>atPos(id,DOOR,.9))||m.preT>40){m.pre=false;markDirty()}continue}
   m.t+=dt*ef;const T1=m.d/m.speed,T=2*T1+m.wait;
   if(!m.arrived&&m.t>=T1+m.wait){m.arrived=true;if(MIS[m.type].arrive(m)==='remove'){G.missions=G.missions.filter(x=>x!==m);markDirty();continue}markDirty()}
-  if(m.t>=T){MIS[m.type].done(m);G.missions=G.missions.filter(x=>x!==m);markDirty()}}
+  if(m.t>=T){MIS[m.type].done(m);G.missions=G.missions.filter(x=>x!==m);m.chars.forEach(id=>{G.brk[id]=BRK(G.roleOf[id])});markDirty()}}
 }
 function onNewDay(){
  G.heat=Math.max(0,G.heat-6);
@@ -604,11 +631,11 @@ function recReason(R,sid,n){const l=lvl('tecnico');if(l<R.minLvl)return `Requier
  if(G.queue.length>=6)return 'Cola llena';return ''}
 function craft(rid,sid,n){const R=recOf(rid),why=recReason(R,sid,n);if(why)return toast(why,'bad');const raw=G.inv.goods[sid+'|'],q=raw.q;
  takeGoods(sid+'|',R.herb*n);for(const[k,v]of Object.entries(R.ing))G.inv.ing[k]-=v*n;G.queue.push({r:rid,s:sid,b:n,n:R.herb*n,q,p:0});sfx('click');markDirty()}
-function scoutZone(zi){if(missionOf('ojeador'))return toast(`${nm('ojeador')} ya está en misión`,'bad');if(G.money<20)return toast('Dinero insuficiente','bad');G.money-=20;const l=lvl('ojeador');
+function scoutZone(zi){{const m=restMsg(['ojeador']);if(m)return toast(m,'bad')}if(missionOf('ojeador'))return toast(`${nm('ojeador')} ya está en misión`,'bad');if(G.money<20)return toast('Dinero insuficiente','bad');G.money-=20;const l=lvl('ojeador');
  startMission({type:'scout',role:'ojeador',chars:[roleChar('ojeador').id],dest:zpos(zi),speed:2.2*(1+.12*(l-1)),wait:60/(1+.12*(l-1)),data:{z:zi},txt:'Ojeo de zona'});toast(`👁 ${nm('ojeador')} sale a ojear ${ZN[zi].n}`);markDirty()}
-function scoutDistrict(di){if(missionOf('ojeador'))return toast(`${nm('ojeador')} ya está en misión`,'bad');if(G.money<25)return toast('Dinero insuficiente','bad');G.money-=25;const l=lvl('ojeador');
+function scoutDistrict(di){{const m=restMsg(['ojeador']);if(m)return toast(m,'bad')}if(missionOf('ojeador'))return toast(`${nm('ojeador')} ya está en misión`,'bad');if(G.money<25)return toast('Dinero insuficiente','bad');G.money-=25;const l=lvl('ojeador');
  startMission({type:'scout',role:'ojeador',chars:[roleChar('ojeador').id],dest:dpos(di),speed:2.2*(1+.12*(l-1)),wait:55/(1+.12*(l-1)),data:{di},txt:'Ojeo de barrio'});toast(`👁 ${nm('ojeador')} se dirige a ${DIST[di].n}`);markDirty()}
-function assaultDistrict(di){if(missionOf('asaltante'))return toast('Ya está en misión','bad');if(G.kidnap)return toast('Alejo está secuestrado','bad');
+function assaultDistrict(di){{const m=restMsg(['asaltante']);if(m)return toast(m,'bad')}if(missionOf('asaltante'))return toast('Ya está en misión','bad');if(G.kidnap)return toast('Alejo está secuestrado','bad');
  startMission({type:'assault',role:'asaltante',chars:[roleChar('asaltante').id],dest:dpos(di),speed:9,wait:20,data:{di},txt:'Asalto en moto'});toast(`🏍 ${nm('asaltante')} sale en moto hacia ${DIST[di].n}`)}
 const ACT={
  speed(){UI.speed=UI.speed===0?1:0;sfx('click');updateHud()},
@@ -637,7 +664,7 @@ const ACT={
  dgood(d){const g=G.inv.goods[d.id];if(!g)return;UI.deliv.key=d.id;UI.deliv.qty=Math.min(UI.deliv.qty,g.qty)||1},
  dq(d){const u=UI.deliv,g=G.inv.goods[u.key];u.qty=d.v==='max'?g.qty:clamp(u.qty+(+d.v),1,g.qty)},
  dcancel(){UI.deliv=null},
- dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
+ dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
   startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
   toast(`🚚 ${nm('repartidor')} prepara la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
  ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;G.money-=k.ransom;toast(`${charById(k.id).n} es rescatado y vuelve a La Tinto.`,'ok');G.kidnap=null;const o=ich[k.id];o.vis=false}
@@ -660,7 +687,7 @@ function portrait(c){const rx=13*(.9+.15*c.w),sh=22*Math.min(1.25,c.w)+6;let s=`
  return `<svg viewBox="0 0 64 64" style="width:100%;height:100%">${s}</svg>`}
 const bar=(k,c)=>`<div class="bar"><i data-bp="${k}" style="background:${c}"></i></div>`;
 const B=(label,act,o={})=>`<button class="btn ${o.c||''}" data-act="${act}" ${Object.entries(o.d||{}).map(([k,v])=>`data-${k}="${v}"`).join(' ')} ${o.dis?'disabled':''}>${label}</button>`;
-const statusOf=c=>G.kidnap&&G.kidnap.id===c.id?['Secuestrado','bad']:G.missions.some(m=>m.chars.includes(c.id))?['En misión','warn']:['En La Tinto','ok'];
+const statusOf=c=>G.kidnap&&G.kidnap.id===c.id?['Secuestrado','bad']:G.missions.some(m=>m.chars.includes(c.id))?['En misión','warn']:(G.brk[c.id]||0)>0?['Descansa','warn']:['En La Tinto','ok'];
 function charCard(r,full){const c=roleChar(r),l=G.level[c.id],R=ROLES[r],st=statusOf(c),cost=upCost(l);
  let h=`<div class="card"><div class="row" style="align-items:flex-start"><div style="width:${full?72:52}px;height:${full?72:52}px;flex:none">${portrait(c)}</div><div class="grow"><div class="row sp"><b class="hd">${c.n}</b><span class="chip ${st[1]}">${st[0]}</span></div>
  <div class="sub" style="color:var(--acc2)">${R.i} ${R.n}</div><div class="sub mt-1">${r==='boss'?R.d:effText(r,l)}</div>${full?`<div class="sub mt-1">${c.desc}</div>`:''}</div></div>`;
@@ -683,7 +710,7 @@ function shLab(){
   <div class="sub mt-1">${R.herb} cosechas + ${Object.entries(R.ing).map(([k,v])=>`${v}× ${ingOf(k).n}`).join(', ')}</div><div class="sub">Nivel ${R.minLvl} · ${Math.round(R.time/(1+.2*(l-1)))}s por tanda · valor ×${R.mult}</div>
   ${d?`<div class="sub ok">Elaboradas ${d.n} tandas · mejor calidad ${Math.round(d.best)}</div>`:'<div class="sub">Sin descubrir</div>'}</div>`});
   return h}
- h+=`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">🧪 Mesas de ${nm('tecnico')}</b><span class="chip">${G.labTables}/3</span></div><div class="sub mb-2">Cada mesa elabora una receta a la vez y todas trabajan en paralelo. ${nm('tecnico')} debe estar en el laboratorio.</div>`;
+ h+=`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">🧪 Mesas de ${nm('tecnico')}</b><span class="chip">${G.labTables}/3</span></div><div class="sub mb-2">${nm('tecnico')} elabora una receta en cada mesa a la vez (una tanda). Solo descansa cuando termina la última mesa y después empieza la siguiente tanda.</div>`;
  for(let k=0;k<3;k++){const q=G.tabs[k];
   if(k<G.labTables)h+=`<div class="row sp" style="margin-bottom:4px"><b>Mesa ${k+1}</b><span class="sub">${q?`${goodName(q.s+'|'+q.r)} · ${q.n} uds`:'libre'}</span></div>${q?bar('q:'+k,'#2dd4bf')+`<div class="sub mb-2" data-bt="lq:${k}"></div>`:'<div class="mb-2"></div>'}`;
   else if(k===G.labTables)h+=B(`➕ Comprar mesa ${k+1} · ${fmt(TABCOST[k])}`,'buytab',{c:'btn-o w-full mt-2',dis:G.money<TABCOST[k]});
@@ -723,9 +750,9 @@ function shDist(di){const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInf
  let h=`<div class="card"><div class="row sp"><span class="chip ${tl[1]}">${tl[0]} · ${Math.round(S.trust)}</span><span class="chip ${S.unlocked?'ok':'bad'}">${S.unlocked?'Desbloqueado':'Sin desbloquear'}</span></div>${bar('tr:'+di,S.trust<30?'#ef4444':S.trust<60?'#f59e0b':'#22c55e')}
  <div class="sub mt-2">${known?`Precio base ×${D.price.toFixed(2)}${di?` · banda rival: ${D.rival}`:''}`:'Sin ojear: precios y riesgos aproximados.'}</div>
  <div class="sub mt-1">Riesgo ahora: <b class="${ri.total>.35?'bad':'warn'}">${Math.round(ri.total*100)}%</b> · ☀ día: policía ${Math.round(rd.pol*100)}% / bandas ${Math.round(rd.gang*100)}% · 🌙 noche: policía ${Math.round(rn.pol*100)}% / bandas ${Math.round(rn.gang*100)}%</div></div>`;
- h+=`<div class="card" style="border-color:rgba(255,179,71,.65);background:linear-gradient(135deg,rgba(255,179,71,.16),rgba(255,255,255,.03))"><div class="hd" style="font-size:18px">🎯 ${di===0?'Qué se vende en el Centro':'Demanda del barrio'}</div>
+ h+=`<div class="card" style="border-color:rgba(255,179,71,.65);background:linear-gradient(135deg,rgba(255,179,71,.16),rgba(255,255,255,.03))"><div class="hd" style="font-size:18px">🎯 ${di===0?'Qué se vende en El Páramo':'Demanda del barrio'}</div>
  <div class="sub mb-2">Aquí pagan <b class="warn">+${Math.round(FAVB*100)}%</b> por cada coincidencia (cepa o receta):</div><div class="row wrap">${DEM[di].map(f=>{const n=haveFav(f);return`<span class="chip ${n?'ok':'warn'}">${n?'✔':'🔥'} ${favName(f)}${n?` · tienes ${n}`:''}</span>`}).join('')}</div>
- <div class="sub mt-2">${bk?`⭐ Tu mejor opción ahora: <b class="ok">${goodName(bk)}</b> · ${fmt(unitPrice(bk,G.inv.goods[bk].q,di))}/ud`:'Aún no tienes mercancía: cosecha en La Tinto.'}</div>${di===0?'<div class="sub mt-1">💡 El Centro es el barrio más seguro: ideal para empezar con Verdina cruda, Hachís al agua o Rosin.</div>':''}</div>`;
+ <div class="sub mt-2">${bk?`⭐ Tu mejor opción ahora: <b class="ok">${goodName(bk)}</b> · ${fmt(unitPrice(bk,G.inv.goods[bk].q,di))}/ud`:'Aún no tienes mercancía: cosecha en La Tinto.'}</div>${di===0?'<div class="sub mt-1">💡 El Páramo · La Tinto es el barrio más seguro: ideal para empezar con Verdina cruda, Hachís al agua o Rosin.</div>':''}</div>`;
  if(!S.unlocked)h+=`<div class="card"><div class="sub">Puedes repartir aquí sin desbloquear, pero con riesgo extremo de redadas, robos y multas.</div>${B(`🔓 Desbloquear · ${fmt(D.cost)} (confianza ${D.req}+)`,'unlock',{c:'btn-p w-full mt-2',d:{v:di},dis:S.trust<D.req||G.money<D.cost})}</div>`;
  if(UI.deliv&&UI.deliv.di===di){const u=UI.deliv,g=G.inv.goods[u.key];
   if(!g){UI.deliv=null}else{const p=unitPrice(u.key,g.q,di);
@@ -757,23 +784,24 @@ function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=
  $('#hRisk').textContent=dn>.5?'👮 Policía alta':'🗡 Bandas altas';$('#hClock').classList.toggle('night',dn<.5);
  $('#hRep').textContent=Math.round(G.rep);$('#hHeat').style.width=G.heat+'%';$('#hSpeed').innerHTML=UI.speed===0?'⏸<small style="display:block;font-size:10px;line-height:1">x0</small>':'▶<small style="display:block;font-size:10px;line-height:1">x1</small>'}
 function updateChrome(){$('#fabL').textContent=mode==='city'?'🏠 Entrar a La Tinto':'🏙 Ciudad';$('#fabR').style.display=mode==='interior'?'':'none';
- $('#hint').textContent=mode==='city'?'1 dedo: mover · 2 dedos: zoom y rotar · Toca La Tinto, el Almacén, un barrio o una zona':'1 dedo: mover · 2 dedos: zoom y rotar · Toca parcelas, mesas de laboratorio o personajes';
+ $('#hint').textContent=mode==='city'?'1 dedo: mover · 2 dedos: zoom y rotar · Toca La Tinto, el Almacén, un barrio o una zona':'1 dedo: mover · pellizca: zoom · Toca parcelas, mesas de laboratorio o personajes';
  $('#hint').style.opacity=SH.type||tut.active?0:1;$('#fabs').style.display=SH.type&&innerWidth<760?'none':'flex'}
 
 /* ====================== CÁMARA Y MODOS ====================== */
 const aspect=()=>innerWidth/innerHeight;
 const cityView=()=>{const k=clamp(.95/aspect(),1,2.1);return{pos:new V3(52*k,60*k,70*k),tg:new V3(0,0,0)}};
-const interiorView=()=>{const a=aspect(),t=Math.tan(12.5*Math.PI/180),H=a>=1?Math.max(56/(2*t*a),30/(2*t)):28/(2*t*a);return{tg:new V3(OFF,0,0),pos:new V3(OFF,H,.001)}};
+const interiorView=()=>{const a=aspect(),t=Math.tan(12.5*Math.PI/180),H=a>=1?Math.max(56/(2*t*a),30/(2*t)):28/(2*t*a),P=.35;return{tg:new V3(OFF,0,0),pos:new V3(OFF,H*Math.cos(P),H*Math.sin(P))}};
 let tw=null;
 function tweenCam(pos,tgt,dur,done){tw={t0:performance.now(),dur,p0:camera.position.clone(),p1:pos.clone(),a:controls.target.clone(),b:tgt.clone(),done}}
 function stepTween(now){if(!tw)return;const k=clamp((now-tw.t0)/tw.dur,0,1),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(tw.p0,tw.p1,e);controls.target.lerpVectors(tw.a,tw.b,e);camera.lookAt(controls.target);if(k>=1){const d=tw.done;tw=null;d&&d()}}
 function fade(o,cb){$('#fade').style.opacity=o;setTimeout(()=>cb&&cb(),330)}
 function applyMode(){
+ controls.touches.TWO=mode==='city'?THREE.TOUCH.DOLLY_ROTATE:THREE.TOUCH.DOLLY_PAN;controls.mouseButtons.RIGHT=mode==='city'?THREE.MOUSE.ROTATE:THREE.MOUSE.PAN;
  if(mode==='city'){camera.fov=45;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:22,maxDistance:420,minPolarAngle:.25,maxPolarAngle:1.3,minAzimuthAngle:-Infinity,maxAzimuthAngle:Infinity});scene.fog=new THREE.Fog(0x0a0614,420,1000)}
- else{camera.fov=25;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:14,maxDistance:230,minPolarAngle:.0001,maxPolarAngle:.0001,minAzimuthAngle:-Infinity,maxAzimuthAngle:Infinity});scene.fog=null}
+ else{camera.fov=25;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:14,maxDistance:230,minPolarAngle:.35,maxPolarAngle:.35,minAzimuthAngle:0,maxAzimuthAngle:0});scene.fog=null}
  updateLighting();updateHud();updateChrome()}
 function enterTinto(){if(busyCam||tw||mode!=='city'||!G)return;closeSheet();busyCam=true;
- tweenCam(new V3(0,8,24),new V3(0,3.5,0),1000,()=>fade(1,()=>{mode='interior';applyMode();const v=interiorView();camera.position.copy(v.pos).add(new V3(0,v.pos.y*.6,0));controls.target.copy(v.tg);camera.lookAt(v.tg);fade(0);tweenCam(v.pos,v.tg,1300,()=>{busyCam=false})}))}
+ tweenCam(new V3(0,8,24),new V3(0,3.5,0),1000,()=>fade(1,()=>{mode='interior';applyMode();const v=interiorView();camera.position.copy(v.pos).multiplyScalar(1.5).setX(OFF);controls.target.copy(v.tg);camera.lookAt(v.tg);fade(0);tweenCam(v.pos,v.tg,1300,()=>{busyCam=false})}))}
 function exitTinto(){if(busyCam||tw||mode!=='interior')return;closeSheet();busyCam=true;fade(1,()=>{mode='city';applyMode();camera.position.set(0,10,26);controls.target.set(0,3.5,0);camera.lookAt(controls.target);fade(0);const v=cityView();tweenCam(v.pos,v.tg,1400,()=>{busyCam=false})})}
 const nightC=new THREE.Color('#02030c'),dayC=new THREE.Color('#8fcbff'),duskC=new THREE.Color('#ff9a62'),bgC=new THREE.Color(),skyN=new THREE.Color('#1b2458'),skyD=new THREE.Color('#d6ecff'),grN=new THREE.Color('#04030a'),grD=new THREE.Color('#b7a98f'),sunWarm=new THREE.Color('#fff0cf'),sunDusk=new THREE.Color('#ff9a5a'),moonC=new THREE.Color('#8aa4ff');
 let NF=0;
@@ -826,8 +854,8 @@ const TUT=[
   start(){closeSheet();Object.assign(G.plots[TP],{state:'ready',growth:1,qAcc:1,quality:82,water:60})},
   hl:()=>SH.type==='plot'&&SH.arg===TP?'[data-act="harvest"]':null,wait:()=>G.plots[TP].state==='empty'},
  {t:()=>'5 · Sal a la ciudad',x:()=>'Ya tienes Verdina en el almacén. Para venderla pulsa <b>🏙 Ciudad</b>.',at:{mode:'interior'},start(){closeSheet()},hl:()=>'#fabL',wait:inCity},
- {t:()=>'6 · Elige el barrio',x:()=>'Toca el suelo del barrio <b>Centro</b> (flecha), junto a La Tinto, para abrir su hoja. Ahí verás qué mercancía demandan.',at:{mode:'city',pos:()=>new V3(0,1,15)},note:()=>'No toques el edificio La Tinto: toca el suelo de la plaza.',wait:()=>SH.type==='dist'&&SH.arg===0},
- {t:()=>'7 · Mira la demanda y reparte',x:()=>'Arriba ves <b>🎯 Demanda</b> y <b>⭐ tu mejor opción</b>. Pulsa <b>🚚 Repartir</b>.',at:{mode:'city'},hl:()=>SH.type==='dist'&&!UI.deliv?'[data-act="dstart"]':null,note:()=>SH.type!=='dist'?'Vuelve a tocar el barrio Centro.':'',wait:()=>!!UI.deliv},
+ {t:()=>'6 · Elige el barrio',x:()=>'Toca el suelo del barrio <b>El Páramo</b> (flecha), junto a La Tinto, para abrir su hoja. Ahí verás qué mercancía demandan.',at:{mode:'city',pos:()=>new V3(0,1,15)},note:()=>'No toques el edificio La Tinto: toca el suelo de la plaza.',wait:()=>SH.type==='dist'&&SH.arg===0},
+ {t:()=>'7 · Mira la demanda y reparte',x:()=>'Arriba ves <b>🎯 Demanda</b> y <b>⭐ tu mejor opción</b>. Pulsa <b>🚚 Repartir</b>.',at:{mode:'city'},hl:()=>SH.type==='dist'&&!UI.deliv?'[data-act="dstart"]':null,note:()=>SH.type!=='dist'?'Vuelve a tocar el barrio El Páramo.':'',wait:()=>!!UI.deliv},
  {t:()=>`8 · Envía a ${nm('repartidor')}`,x:()=>'Elige la mercancía (⭐ la mejor) y la cantidad, y pulsa <b>Enviar reparto</b>.',at:{mode:'city'},hl:()=>UI.deliv?'[data-act="dgo"]':null,note:()=>!UI.deliv?'Pulsa Repartir en la hoja del barrio.':'',wait:()=>!!missionOf('repartidor')},
  {t:()=>'¡Listo, Boss!',x:()=>`${nm('repartidor')} camina hasta la puerta y sale en coche. <b>De día</b> manda la policía ☀ y <b>de noche</b> las bandas 🌙 (mira el reloj). Usa el <b>Almacén</b> para suministros, manda a ${nm('ojeador')} a ojear zonas y sube de nivel a tu equipo con <b>👥 Equipo</b> dentro de La Tinto. ¡Ahora corre el tiempo!`,last:true}];
 const TUT_INFO=[
@@ -868,7 +896,7 @@ function showSelect(){let chosen=null;let hasSave=false;try{hasSave=!!localStora
  const gb=$('#goBtn');if(gb)gb.onclick=()=>{if(chosen)startGame(chosen,false)};const lb=$('#loadBtn');if(lb)lb.onclick=()=>startGame(null,true)};
  render()}
 function startGame(bossId,load){
- if(load){try{G=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){G=null}if(!G||G.v!==2){G=null;toast('No se pudo cargar la partida','bad');return}G.wq=G.wq||[];G.labTables=G.labTables||1;G.tabs=G.tabs||[null,null,null];G.zones=G.zones||ZN.map(()=>({scouted:false}))}else newGame(bossId);
+ if(load){try{G=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){G=null}if(!G||G.v!==2){G=null;toast('No se pudo cargar la partida','bad');return}G.wq=G.wq||[];G.labTables=G.labTables||1;G.brk=G.brk||{};G.tabs=G.tabs||[null,null,null];G.zones=G.zones||ZN.map(()=>({scouted:false}))}else newGame(bossId);
  $('#sel').style.display='none';started=true;controls.autoRotate=false;
  for(let i=0;i<9;i++)buildDistrict(i);ZN.forEach((_,i)=>refreshZone(i));updateFrames();refreshLabels();placeChars();updateLighting();markDirty();updateHud();updateChrome();
  const v=cityView();tweenCam(v.pos,v.tg,1600);
@@ -885,17 +913,17 @@ function updateInterior(sdt,rdt,t){
  CHARS.forEach(c=>{const o=ich[c.id],role=G.roleOf[c.id];
   if(away.has(c.id)){o.g.visible=false;o.vis=false;return}
   if(!o.vis){o.vis=true;o.g.visible=true;o.g.position.set(DOOR[0],0,DOOR[1])}
-  o.work=false;let tg=null;
+  o.work=false;let tg=null;const resting=(G.brk[c.id]||0)>0;setLabel(o.g.userData.label,resting?`${c.n}\n😴 ${Math.ceil(G.brk[c.id])}s`:`${c.n}\n${ROLES[role].i} ${ROLES[role].s}`);
   if(head.has(c.id))tg=DOOR;
   else if(role==='boss')tg=BOSS_POS;
-  else if(role==='regador'&&jobs.regador){tg=jobs.regador.p;o.work=jobs.regador.st==='act'}
-  else if(role==='cosechador'&&jobs.cosechador){tg=jobs.cosechador.p;o.work=jobs.cosechador.st==='act'}
-  else if(role==='tecnico'&&act.length){tg=labStand(act[Math.floor(t/7)%act.length]);o.work=izIn}
+  else if(role==='regador'&&jobs.regador&&!resting){tg=jobs.regador.p;o.work=jobs.regador.st==='act'}
+  else if(role==='cosechador'&&jobs.cosechador&&!resting){tg=jobs.cosechador.p;o.work=jobs.cosechador.st==='act'}
+  else if(role==='tecnico'&&act.length&&!resting){tg=labStand(act[Math.floor(t/7)%act.length]);o.work=izIn}
   if(tg)o.tg=tg;else rest.push(c)});
  rest.forEach((c,k)=>{ich[c.id].tg=REST[k%REST.length]});
  CHARS.forEach(c=>{const o=ich[c.id];if(!o.vis)return;const g=o.g,b=o.body,dx=o.tg[0]-g.position.x,dz=o.tg[1]-g.position.z,d=Math.hypot(dx,dz);
-  if(d>.08){const s=Math.min(d,3.6*sdt);g.position.x+=dx/d*s;g.position.z+=dz/d*s;if(sdt>0){let da=Math.atan2(dx,dz)-b.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));b.rotation.y+=da*Math.min(1,12*rdt)}b.scale.setScalar(1+Math.abs(Math.sin(t*9))*.05)}
-  else{b.rotation.y+=(0-b.rotation.y)*.1;b.scale.setScalar(o.work?1+Math.abs(Math.sin(t*6))*.1:1+Math.sin(t*1.5+c.h*7)*.015)}});
+  if(d>.08){const s=Math.min(d,3.6*sdt);g.position.x+=dx/d*s;g.position.z+=dz/d*s;if(sdt>0){let da=Math.atan2(dx,dz)-b.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));b.rotation.y+=da*Math.min(1,12*rdt)}b.scale.setScalar(1.2*(1+Math.abs(Math.sin(t*9))*.05));b.position.y=Math.abs(Math.sin(t*9))*.1}
+  else{b.rotation.y+=(0-b.rotation.y)*.1;b.position.y=0;b.scale.setScalar(1.2*(o.work?1+Math.abs(Math.sin(t*6))*.06:1+Math.sin(t*1.5+c.h*7)*.01))}});
  plotVis.forEach((v,i)=>{
   if(i>=G.plotCount){v.tile.material=v.ghost;v.plant.visible=false;v.bw.visible=false;v.bg.visible=false;v.pot.visible=false;const ob=i===G.plotCount&&mode==='interior';v.ic.visible=ob;if(ob)setLabel(v.ic,'🔒 Ampliar','#fff','rgba(90,70,120,.92)');return}
   const p=G.plots[i];v.tile.material=v.tmat;v.pot.visible=true;
@@ -932,7 +960,7 @@ function updateCity(rdt,t){
  if(selFrame.visible)selFrame.children.forEach(m=>m.scale.y=1+Math.sin(t*4)*.2);
  ZN.forEach((Z,zi)=>{const c=zoneG[zi].userData.crystal;if(c){c.rotation.y=t*.8;c.position.y=3+Z.tier*.4+Math.sin(t*1.5+zi)*.3}})}
 let uiT=0,lightT=0;
-function frame(now){requestAnimationFrame(frame);try{frameBody(now)}catch(e){if(!frame.err){frame.err=1;showFatal(e.message)}}}
+function frame(now){requestAnimationFrame(frame);try{frameBody(now)}catch(e){if(!frame.err){frame.err=1;console.error('[La Tinto] error en un fotograma',e)}}}
 let last=performance.now();
 function frameBody(now){const rdt=Math.min(.1,(now-last)/1000);last=now;const t=now/1000;
  if(G&&started){const paused=tut.active||UI.speed===0,sp=paused?0:UI.speed,sdt=rdt*Math.min(sp,4);
@@ -947,16 +975,18 @@ function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWi
 addEventListener('resize',resize);
 
 /* ====================== ARRANQUE ====================== */
-function showFatal(msg){let d=document.getElementById('fatal');if(!d){d=document.createElement('div');d.id='fatal';d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:200;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:10px;font:12px/1.4 monospace;white-space:pre-wrap;max-height:40vh;overflow:auto';document.body.appendChild(d)}d.textContent='Error: '+msg}
-window.addEventListener('error',e=>showFatal(e.message+(e.lineno?' (línea '+e.lineno+')':'')));
-window.addEventListener('unhandledrejection',e=>showFatal(String(e.reason)));
 function boot(){
- if(typeof THREE==='undefined'||!THREE.OrbitControls){showFatal('No se pudo cargar Three.js. Comprueba tu conexión a internet y recarga.');return}
- buildCity();buildCityActors();buildInterior();applyMode();
- {const v=cityView();camera.position.copy(v.pos);controls.target.set(0,0,0)}
- resize();showSelect();
- requestAnimationFrame(frame)}
+ try{
+  if(typeof THREE==='undefined'||!THREE.OrbitControls)throw new Error('Three.js no está cargado');
+  buildCity();buildCityActors();buildInterior();applyMode();
+  {const v=cityView();camera.position.copy(v.pos);controls.target.set(0,0,0)}
+  resize();showSelect();
+  requestAnimationFrame(frame)
+ }catch(e){__bootFail(e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+/*__APP_END__*/
+}catch(e){__bootFail(e)}
+})();
 </script>
 </body>
 </html>
