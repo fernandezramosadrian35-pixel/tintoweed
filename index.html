@@ -126,7 +126,7 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
   <div class="pill"><span class="ic">⭐</span><b id="hRep">0</b></div>
   <div class="pill heat"><span class="ic">🔥</span><div class="bar"><i id="hHeat" style="background:linear-gradient(90deg,#fbbf24,#ef4444)"></i></div></div>
 </header>
-<div id="sidebtns"><button class="rbtn" id="hSpeed" data-act="speed" aria-label="Pausar o reanudar">▶</button><button class="rbtn" data-act="settings" aria-label="Ajustes">⚙<i id="cdot"></i></button></div>
+<div id="sidebtns"><button class="rbtn" id="hSpeed" data-act="speed" aria-label="Pausar o reanudar">▶</button><button class="rbtn" data-act="rank" aria-label="Clasificación online">🏆</button><button class="rbtn" data-act="settings" aria-label="Ajustes">⚙<i id="cdot"></i></button></div>
 <div id="mstrip"></div>
 <div id="hint"></div>
 <div id="fabs"><button class="fab" id="fabL" data-act="view"></button><button class="fab" id="fabR" data-act="team" style="display:none">👥 Equipo</button></div>
@@ -150,7 +150,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const fmt=n=>Math.round(n).toLocaleString('es-ES')+' €';
 const V3=THREE.Vector3;
-const OFF=600,DAY_LEN=450,PAY_EVERY=7,SAL_MULT=3,SAVE_KEY='latinto_save_v2';
+const OFF=600,DAY_LEN=337.5,PAY_EVERY=7,SAL_MULT=3,SAVE_KEY='latinto_save_v2';
 const NODES=[-57,-19,19,57];
 const SUPABASE_URL = 'https://tleeroufikayakjirqtr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZWVyb3VmaWtheWFramlycXRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NzgzNDQsImV4cCI6MjEwNjU1NDM0NH0.3-jh9FRQ2PKJXlsJFvRsPmxo2yaYA45LoXDz6OuI2Kk';
@@ -189,17 +189,17 @@ const effText=(r,l)=>({
  asaltante:`Éxito base ${Math.round(clamp(.2+.04*l,.1,.9)*100)}% (+ confianza del barrio)`
 })[r];
 const CHARS=[
-{id:'jeilian',n:'Jeilian',role:'boss',h:1.2,w:.78,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'',shirt:'#7c3aed',desc:'Alto, delgado, piel clara, pelo castaño oscuro.'},
-{id:'marki',n:'Marki',role:'regador',h:.9,w:.8,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'cap',shirt:'#0ea5e9',desc:'Estatura media-baja, delgado, pelo castaño oscuro con gorra.'},
-{id:'cachon',n:'Cachón',role:'vendedor',h:1.2,w:.78,skin:'#d8a77c',hair:'#3a2a1f',style:'vshort',acc:'',shirt:'#f59e0b',desc:'Alto, delgado, ligeramente moreno, pelo castaño oscuro corto.'},
-{id:'sanmillan',n:'San Millán',role:'buscador',h:1,w:.95,skin:'#f1d6bd',hair:'#e6c35c',style:'long',acc:'glasses',shirt:'#84cc16',desc:'Estatura media, piel clara, pelo largo rubio y gafas.'},
-{id:'fonsi',n:'Fonsi',role:'repartidor',h:.78,w:1.3,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'',shirt:'#ef4444',desc:'Bajo, fuerte y ancho, piel clara, pelo castaño oscuro.'},
-{id:'garmon',n:'Garmón',role:'policia',h:1.2,w:1.25,skin:'#ecd0b4',hair:'#5a3d28',style:'short',acc:'glasses',shirt:'#475569',desc:'Alto, fuerte, gafas, pelo castaño.'},
-{id:'rodri',n:'Rodri',role:'ojeador',h:.74,w:.8,skin:'#f3dcc6',hair:'#ecc94b',style:'short',acc:'',shirt:'#14b8a6',desc:'Rubio y bajito.'},
-{id:'dario',n:'Darío',role:'conductor',h:1.2,w:1.25,skin:'#e6c3a5',hair:'#101014',style:'short',acc:'',shirt:'#f97316',desc:'Alto, fuerte, pelo negro.'},
-{id:'chino',n:'Chino',role:'cosechador',h:.8,w:.95,skin:'#b98557',hair:'#0c0c10',style:'short',acc:'',shirt:'#22c55e',desc:'Tez oscura, pelo negro, bajo.'},
-{id:'izan',n:'Izan',role:'tecnico',h:.8,w:.9,skin:'#efd2b8',hair:'#0c0c10',style:'vshort',acc:'',shirt:'#e5e7eb',desc:'Bajito, pelo negro muy corto.'},
-{id:'alejo',n:'Alejo',role:'asaltante',h:.8,w:.85,skin:'#9a6a46',hair:'#0c0c10',style:'short',acc:'',shirt:'#9f1239',desc:'Colombiano, tez oscura, pelo negro, bajito.'}
+{id:'jeilian',n:'Jeilian',role:'boss',h:1.2,w:.78,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'',shirt:'#7c3aed'},
+{id:'marki',n:'Marki',role:'regador',h:.9,w:.8,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'cap',shirt:'#0ea5e9'},
+{id:'cachon',n:'Cachón',role:'vendedor',h:1.2,w:.78,skin:'#d8a77c',hair:'#3a2a1f',style:'vshort',acc:'',shirt:'#f59e0b'},
+{id:'sanmillan',n:'San Millán',role:'buscador',h:1,w:.95,skin:'#f1d6bd',hair:'#e6c35c',style:'long',acc:'glasses',shirt:'#84cc16'},
+{id:'fonsi',n:'Fonsi',role:'repartidor',h:.78,w:1.3,skin:'#f1d6bd',hair:'#3a2a1f',style:'short',acc:'',shirt:'#ef4444'},
+{id:'garmon',n:'Garmón',role:'policia',h:1.2,w:1.25,skin:'#ecd0b4',hair:'#5a3d28',style:'short',acc:'glasses',shirt:'#475569'},
+{id:'rodri',n:'Rodri',role:'ojeador',h:.74,w:.8,skin:'#f3dcc6',hair:'#ecc94b',style:'short',acc:'',shirt:'#14b8a6'},
+{id:'dario',n:'Darío',role:'conductor',h:1.2,w:1.25,skin:'#e6c3a5',hair:'#101014',style:'short',acc:'',shirt:'#f97316'},
+{id:'chino',n:'Chino',role:'cosechador',h:.8,w:.95,skin:'#b98557',hair:'#0c0c10',style:'short',acc:'',shirt:'#22c55e'},
+{id:'izan',n:'Izan',role:'tecnico',h:.8,w:.9,skin:'#efd2b8',hair:'#0c0c10',style:'vshort',acc:'',shirt:'#e5e7eb'},
+{id:'alejo',n:'Alejo',role:'asaltante',h:.8,w:.85,skin:'#9a6a46',hair:'#0c0c10',style:'short',acc:'',shirt:'#9f1239'}
 ];
 const STR=[
  {id:'verdina',n:'Verdina',c:'#4ade80',seed:20,time:100,yield:4,base:18,rep:0},
@@ -467,7 +467,7 @@ function makeCar(col){const g=new THREE.Group();box(3.8,1,1.9,M(col),0,.9,0,g);b
  const hm=new THREE.MeshBasicMaterial({color:'#fff6c8'});box(.1,.3,.3,hm,1.9,.95,.5,g,false);box(.1,.3,.3,hm,1.9,.95,-.5,g,false);
  box(.1,.25,.3,new THREE.MeshBasicMaterial({color:'#ff2040'}),-1.9,.95,.55,g,false);box(.1,.25,.3,new THREE.MeshBasicMaterial({color:'#ff2040'}),-1.9,.95,-.55,g,false);
  addGlow(g,3,.9,0,'#fff2b0',7,'night');
- const L=makeLabel('',{w:384,h:112,font:32,scale:[11,3.2]});L.position.y=5;g.add(L);g.userData.label=L;g.userData.exhaust=[-2.1,.4,0];g.visible=false;scene.add(g);return g}
+ const L=makeLabel('',{w:512,h:112,font:30,scale:[14.5,3.2]});L.position.y=5;g.add(L);g.userData.label=L;g.userData.exhaust=[-2.1,.4,0];g.visible=false;scene.add(g);return g}
 function makeMoto(){const g=new THREE.Group();
  [-.95,.95].forEach(x=>{const w=cyl(.45,.45,.28,M('#111'),x,.45,0,g,12);w.rotation.x=Math.PI/2;const r=cyl(.2,.2,.3,M('#9ca3af',{metalness:.6}),x,.45,0,g,8);r.rotation.x=Math.PI/2});
  box(1.9,.35,.4,M('#be123c'),0,.8,0,g);box(.9,.5,.5,M('#e11d48'),.35,1.1,0,g);box(.8,.2,.45,M('#1f2937'),-.35,1.15,0,g);
@@ -624,7 +624,7 @@ const MIS={
   if(roll<r.pol){const fine=Math.round(val*.35+50);G.money=Math.max(0,G.money-fine);G.heat=Math.min(100,G.heat+8);S.trust=Math.max(0,S.trust-1.5);toast(`🚓 ¡Redada en ${D.n}! Incautan la mercancía y te multan con ${fmt(fine)}.`,'bad');floatText('REDADA','#fb7185',pos)}
   else if(roll<r.pol+r.gang){S.trust=Math.max(0,S.trust-2);let extra='';if(Math.random()<.5){const lost=Math.min(G.money,Math.round(rnd(60,200)));G.money-=lost;extra=` Además te roban ${fmt(lost)}.`}toast(`🔪 Emboscada de ${D.rival} en ${D.n}${night?' (de noche)':''}: pierdes la mercancía.${extra}`,'bad');floatText('EMBOSCADA','#fb7185',pos)}
   else{const rev=revenue(d.qty,unitPrice(d.key,d.q,d.di));gain(Math.round(rev),pos);G.stats.delivered+=d.qty;S.trust=Math.min(100,S.trust+.6+d.qty*.12);G.rep=Math.min(100,G.rep+.4+d.qty*.03);G.heat=Math.min(100,G.heat+d.qty*.8);toast(`✅ Reparto en ${D.n}: ${d.qty}× ${goodName(d.key)} por ${fmt(rev)}`,'ok')}markDirty()},
-  done(){toast(`${nm('repartidor')} vuelve a La Tinto.`)}},
+  done(){toast(`${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} vuelven a La Tinto.`)}},
  scout:{arrive(m){if(m.data.z!==undefined){G.zones[m.data.z].scouted=true;refreshZone(m.data.z);toast(`👁 ${nm('ojeador')} ojea ${ZN[m.data.z].n}: ya puedes enviar viajes de búsqueda.`,'ok')}
   else{const S=G.d[m.data.di],l=lvl('ojeador'),g=5+1.3*l+rnd(-1,2);S.trust=Math.min(100,S.trust+g);S.scouted=true;toast(`👁 ${nm('ojeador')} analiza ${DIST[m.data.di].n}: confianza +${g.toFixed(1)}`,'ok')}},done(){}},
  assault:{arrive(m){const di=m.data.di,S=G.d[di],D=DIST[di],l=lvl('asaltante'),ch=clamp(.2+.04*l+S.trust*.004,.1,.9),pos=dpos(di),who=roleChar('asaltante');
@@ -650,7 +650,7 @@ function assaultDistrict(di){{const m=restMsg(['asaltante']);if(m)return toast(m
 const ACT={
  speed(){UI.speed=UI.speed===0?1:0;sfx('click');updateHud()},
  view(){mode==='city'?enterTinto():exitTinto()},
- team(){openSheet('team')},settings(){openSheet('settings')},
+ team(){openSheet('team')},settings(){openSheet('settings')},rank(){openSheet('rank');loadRank()},rankrefresh(){loadRank()},
  sclose(){closeSheet()},
  tut(){closeSheet();startTut(true)},save(){saveGame(true)},
  mute(){UI.mute=!UI.mute},
@@ -676,9 +676,9 @@ const ACT={
  dgood(d){const g=G.inv.goods[d.id];if(!g)return;UI.deliv.key=d.id;UI.deliv.qty=Math.min(UI.deliv.qty,g.qty)||1},
  dq(d){const u=UI.deliv,g=G.inv.goods[u.key];u.qty=d.v==='max'?g.qty:clamp(u.qty+(+d.v),1,g.qty)},
  dcancel(){UI.deliv=null},
- dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
-  startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
-  toast(`🚚 ${nm('repartidor')} prepara la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
+ dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor','vendedor','policia']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
+  startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id,roleChar('vendedor').id,roleChar('policia').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
+  toast(`🚚 ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} preparan la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
  ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;G.money-=k.ransom;toast(`${charById(k.id).n} es rescatado y vuelve a La Tinto.`,'ok');G.kidnap=null;const o=ich[k.id];o.vis=false}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(!f)return;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');if(!G&&!['tut','settings','sclose'].includes(b.dataset.act))return;f(b.dataset);markDirty()});
@@ -702,7 +702,7 @@ const B=(label,act,o={})=>`<button class="btn ${o.c||''}" data-act="${act}" ${Ob
 const statusOf=c=>G.kidnap&&G.kidnap.id===c.id?['Secuestrado','bad']:G.missions.some(m=>m.chars.includes(c.id))?['En misión','warn']:(G.brk[c.id]||0)>0?['Descansa','warn']:['En La Tinto','ok'];
 function charCard(r,full){const c=roleChar(r),l=G.level[c.id],R=ROLES[r],st=statusOf(c),cost=upCost(l);
  let h=`<div class="card"><div class="row" style="align-items:flex-start"><div style="width:${full?72:52}px;height:${full?72:52}px;flex:none">${portrait(c)}</div><div class="grow"><div class="row sp"><b class="hd">${c.n}</b><span class="chip ${st[1]}">${st[0]}</span></div>
- <div class="sub" style="color:var(--acc2)">${R.i} ${R.n}</div><div class="sub mt-1">${r==='boss'?R.d:effText(r,l)}</div>${full?`<div class="sub mt-1">${c.desc}</div>`:''}</div></div>`;
+ <div class="sub" style="color:var(--acc2)">${R.i} ${R.n}</div><div class="sub mt-1">${r==='boss'?R.d:effText(r,l)}</div></div></div>`;
  if(r!=='boss')h+=`<div class="row sp mt-2"><div><div>${Array.from({length:10},(_,k)=>`<span class="pip ${k<l?'on':''}"></span>`).join('')}</div><div class="sub">Nv ${l} · ${fmt(salary(r,l))}/semana</div></div>${l<10?B(`Nivel ${l+1} · ${fmt(cost)}`,'up',{c:'btn-p',d:{id:c.id},dis:G.money<cost}):'<span class="chip ok">Nivel máx.</span>'}</div>`;
  if(G.kidnap&&G.kidnap.id===c.id)h+=B(`Pagar rescate · ${fmt(G.kidnap.ransom)}`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<G.kidnap.ransom});
  return h+'</div>'}
@@ -768,7 +768,7 @@ function shDist(di){const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInf
  if(!S.unlocked)h+=`<div class="card"><div class="sub">Puedes repartir aquí sin desbloquear, pero con riesgo extremo de redadas, robos y multas.</div>${B(`🔓 Desbloquear · ${fmt(D.cost)} (confianza ${D.req}+)`,'unlock',{c:'btn-p w-full mt-2',d:{v:di},dis:S.trust<D.req||G.money<D.cost})}</div>`;
  if(UI.deliv&&UI.deliv.di===di){const u=UI.deliv,g=G.inv.goods[u.key];
   if(!g){UI.deliv=null}else{const p=unitPrice(u.key,g.q,di);
-   h+=`<div class="card"><div class="hd mb-2" style="font-size:18px">🚚 Reparto con ${nm('repartidor')}</div><div class="sub mb-2">${nm('vendedor')} negocia: precio completo hasta ${sellCap()} uds. El riesgo se calcula a la llegada.</div><div class="grid2 mb-2">${Object.keys(G.inv.goods).map(k=>{const dm=demandMult(di,k),tags=(dm>1?`<span class="warn"> 🔥+${Math.round((dm-1)*100)}%</span>`:'')+(k===bk?'<span class="ok"> ⭐ mejor</span>':'');return`<button class="sbtn ${k===u.key?'on':''}" data-act="dgood" data-id="${k}"><b>${goodName(k)}</b>${tags}<br><span class="sub">${G.inv.goods[k].qty} uds · cal. ${Math.round(G.inv.goods[k].q)} · ${fmt(unitPrice(k,G.inv.goods[k].q,di))}/ud</span></button>`}).join('')}</div>
+   h+=`<div class="card"><div class="hd mb-2" style="font-size:18px">🚚 Reparto: ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')}</div><div class="sub mb-2">Van juntos en el coche: ${nm('vendedor')} negocia (precio completo hasta ${sellCap()} uds) y ${nm('policia')} reduce el riesgo policial. El riesgo se calcula a la llegada.</div><div class="grid2 mb-2">${Object.keys(G.inv.goods).map(k=>{const dm=demandMult(di,k),tags=(dm>1?`<span class="warn"> 🔥+${Math.round((dm-1)*100)}%</span>`:'')+(k===bk?'<span class="ok"> ⭐ mejor</span>':'');return`<button class="sbtn ${k===u.key?'on':''}" data-act="dgood" data-id="${k}"><b>${goodName(k)}</b>${tags}<br><span class="sub">${G.inv.goods[k].qty} uds · cal. ${Math.round(G.inv.goods[k].q)} · ${fmt(unitPrice(k,G.inv.goods[k].q,di))}/ud</span></button>`}).join('')}</div>
    <div class="row mb-2"><button class="btn" data-act="dq" data-v="-5">−5</button><button class="btn" data-act="dq" data-v="-1">−1</button><b class="hd grow" style="text-align:center;font-size:22px">${u.qty} uds</b><button class="btn" data-act="dq" data-v="1">+1</button><button class="btn" data-act="dq" data-v="5">+5</button></div>
    <button class="btn w-full mb-2" data-act="dq" data-v="max">Todo (${g.qty})</button>
    <div class="sub">Precio unitario ${fmt(p)} · ingreso estimado <b class="ok">${fmt(revenue(u.qty,p))}</b></div>
@@ -781,12 +781,41 @@ function shDist(di){const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInf
 function shTeam(){let h=`<div class="card"><div class="row sp"><div><b class="hd">Nómina semanal</b><div class="sub">Próximo pago en ${PAY_EVERY-(G.day-G.lastPay)} día(s)</div></div><b class="hd warn" style="font-size:18px">${fmt(payroll())}</b></div>${G.owed>0?`<div class="sub bad mt-1">⚠ Pendiente ${fmt(G.owed)} · el equipo trabaja a medio ritmo</div>`:''}</div>`;
  ROLE_ORDER.forEach(r=>{h+=charCard(r,false)});return['Equipo',h]}
 function shChar(id){const c=charById(id);return[c.n,charCard(G.roleOf[id],true)]}
+/* ====================== CLASIFICACIÓN ONLINE ====================== */
+let RANK={state:'idle',rows:[],msg:''};
+async function loadRank(){
+ RANK={state:'loading',rows:[],msg:''};if(SH.type==='rank')renderSheet();
+ if(!supabase)RANK={state:'nosb',rows:[],msg:''};
+ else if(!online())RANK={state:'offline',rows:[],msg:''};
+ else{try{
+  if(USER&&!USER.guest&&G){saveLocal();await syncCloud()}
+  let rows;
+  try{const r=await withTimeout(supabase.from('latinto_profiles').select('username,rep:save_data->>rep').limit(1000),10000);if(r.error)throw r.error;rows=(r.data||[]).map(x=>({u:x.username,rep:parseFloat(x.rep)||0}))}
+  catch(e1){console.warn('[La Tinto] consulta directa de rep no disponible, se lee save_data',e1);const r=await withTimeout(supabase.from('latinto_profiles').select('username,save_data').limit(1000),12000);if(r.error)throw r.error;rows=(r.data||[]).map(x=>{const sd=normSave(x.save_data);return{u:x.username,rep:sd?(+sd.rep||0):0}})}
+  rows.sort((a,b)=>b.rep-a.rep||String(a.u).localeCompare(String(b.u)));RANK={state:'ok',rows,msg:''}
+ }catch(e){console.warn('[La Tinto] ranking',e);RANK={state:'err',rows:[],msg:String(e&&e.message||e)}}}
+ if(SH.type==='rank')renderSheet()}
+function shRank(){
+ let h=`<div class="mb-2">${B('🔄 Actualizar','rankrefresh',{c:'btn-g w-full'})}</div>`;
+ const S=RANK.state;
+ if(S==='loading')return h+'<div class="sub" style="text-align:center;padding:14px">Cargando clasificación…</div><div class="spin" style="margin:0 auto 16px"></div>';
+ if(S==='nosb')return h+'<div class="card sub">No hay conexión con el servidor de la nube.</div>';
+ if(S==='offline')return h+'<div class="card sub">Necesitas conexión a internet para ver la clasificación.</div>';
+ if(S==='err')return h+`<div class="card"><div class="sub bad">No se pudo cargar la clasificación: ${esc(RANK.msg)}</div><div class="sub mt-1">Comprueba que la tabla <b>latinto_profiles</b> permite leer (SELECT) con la clave anon.</div></div>`;
+ if(S!=='ok')return h;
+ const rows=RANK.rows,me=USER&&!USER.guest?rows.findIndex(r=>r.u===USER.username):-1,medal=['🥇','🥈','🥉'];
+ const line=(r,i)=>{const mine=i===me;return`<div class="card row sp" style="padding:9px 12px;margin-bottom:6px;${mine?'border-color:var(--acc2);background:rgba(45,212,191,.14)':''}"><span class="hd" style="width:46px;font-size:19px">${medal[i]||'#'+(i+1)}</span><b class="grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.u)}${mine?' (tú)':''}</b><span class="hd warn" style="font-size:18px">⭐ ${Math.round(r.rep)}</span></div>`};
+ h+=`<div class="sub mb-2">${rows.length} jugador${rows.length===1?'':'es'}${me>=0?` · tu puesto: <b class="ok">#${me+1}</b>`:''}</div>`;
+ if(!rows.length)return h+'<div class="card sub">Todavía no hay jugadores en la clasificación.</div>';
+ h+=rows.slice(0,50).map(line).join('');
+ if(me>=50)h+=`<div class="sub" style="text-align:center">⋯</div>`+line(rows[me],me);
+ return h+'<div class="sub mt-2">Las estrellas son tu reputación. Se actualizan con el autoguardado (cada 10 s).</div>'}
 function shSettings(){const guest=USER&&USER.guest,cl={ok:'☁ Sincronizado',busy:'☁ Sincronizando…',err:'⚠ Error de nube: se guarda en local',off:guest?'💾 Solo en este dispositivo':'📴 Sin conexión: se guarda en local'}[cloudState]||'';
  return['Ajustes',`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">👤 ${esc(USER?USER.username:'—')}</b><span class="chip ${cloudState==='ok'?'ok':cloudState==='err'?'bad':'warn'}">${cl}</span></div><div class="sub mt-1">Autoguardado cada 10 s en el dispositivo${guest?'.':' y en la nube.'}</div></div>
- <div class="grid2">${B('❓ Tutorial','tut')}${B('💾 Guardar ahora','save')}${B(UI.mute?'🔇 Sonido apagado':'🔊 Sonido activo','mute')}${B('🚪 Cerrar sesión','logout')}</div>${B('🗑 Nueva partida','newgame',{c:'btn-r w-full mt-2'})}
+ <div class="grid2">${B('❓ Tutorial','tut')}${B('💾 Guardar ahora','save')}${B(UI.mute?'🔇 Sonido apagado':'🔊 Sonido activo','mute')}${B('🚪 Cerrar sesión','logout')}</div>${B('🏆 Clasificación online','rank',{c:'btn-o w-full mt-2'})}${B('🗑 Nueva partida','newgame',{c:'btn-r w-full mt-2'})}
  <div class="sub mt-3">Estadísticas: ${G.stats.delivered} uds repartidas · ${fmt(G.stats.earned)} ganados.</div>`]}
 function renderSheet(){if(!G||!SH.type)return;let r;
- switch(SH.type){case'plot':r=shPlot(SH.arg);break;case'lab':r=['Laboratorio de '+nm('tecnico'),shLab()];break;case'wh':r=['📦 Almacén',shWh()];break;case'zone':r=shZone(SH.arg);break;case'dist':r=shDist(SH.arg);break;case'team':r=shTeam();break;case'char':r=shChar(SH.arg);break;default:r=shSettings()}
+ switch(SH.type){case'plot':r=shPlot(SH.arg);break;case'lab':r=['Laboratorio de '+nm('tecnico'),shLab()];break;case'wh':r=['📦 Almacén',shWh()];break;case'zone':r=shZone(SH.arg);break;case'dist':r=shDist(SH.arg);break;case'team':r=shTeam();break;case'rank':r=['🏆 Clasificación online',shRank()];break;case'char':r=shChar(SH.arg);break;default:r=shSettings()}
  const body=$('#sh-body'),sc=body.scrollTop;$('#sh-title').textContent=r[0];body.innerHTML=r[1];body.scrollTop=sc;renderStrip();updateBinds()}
 function renderStrip(){if(!G)return;const ic={expedition:'🚗',delivery:'🚚',scout:'👁',assault:'🏍'};
  $('#mstrip').innerHTML=G.missions.map(m=>`<div class="ms"><div class="row sp"><span>${ic[m.type]} ${m.txt}</span><span data-bt="mp:${m.role}" style="color:var(--mut)"></span></div>${bar('ms:'+m.role,m.type==='assault'?'#fb7185':'#2dd4bf')}</div>`).join('')+(G.kidnap?`<div class="ms" style="border-color:var(--bad)">⛓ ${charById(G.kidnap.id).n} secuestrado</div>`:'')}
@@ -805,7 +834,7 @@ function updateChrome(){$('#fabL').textContent=mode==='city'?'🏠 Entrar a La T
 /* ====================== CÁMARA Y MODOS ====================== */
 const aspect=()=>innerWidth/innerHeight;
 const cityView=()=>{const k=clamp(.95/aspect(),1,2.1);return{pos:new V3(52*k,60*k,70*k),tg:new V3(0,0,0)}};
-const interiorView=()=>{const a=aspect(),t=Math.tan(12.5*Math.PI/180),H=a>=1?Math.max(56/(2*t*a),30/(2*t)):28/(2*t*a),P=.35;return{tg:new V3(OFF,0,0),pos:new V3(OFF,H*Math.cos(P),H*Math.sin(P))}};
+const interiorView=()=>{const a=aspect(),t=Math.tan(12.5*Math.PI/180),H=a>=1?Math.max(56/(2*t*a),30/(2*t)):28/(2*t*a),P=Math.PI/6;return{tg:new V3(OFF,0,0),pos:new V3(OFF,H*Math.cos(P),H*Math.sin(P))}};
 let tw=null;
 function tweenCam(pos,tgt,dur,done){tw={t0:performance.now(),dur,p0:camera.position.clone(),p1:pos.clone(),a:controls.target.clone(),b:tgt.clone(),done}}
 function stepTween(now){if(!tw)return;const k=clamp((now-tw.t0)/tw.dur,0,1),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(tw.p0,tw.p1,e);controls.target.lerpVectors(tw.a,tw.b,e);camera.lookAt(controls.target);if(k>=1){const d=tw.done;tw=null;d&&d()}}
@@ -813,7 +842,7 @@ function fade(o,cb){$('#fade').style.opacity=o;setTimeout(()=>cb&&cb(),330)}
 function applyMode(){
  controls.touches.TWO=mode==='city'?THREE.TOUCH.DOLLY_ROTATE:THREE.TOUCH.DOLLY_PAN;controls.mouseButtons.RIGHT=mode==='city'?THREE.MOUSE.ROTATE:THREE.MOUSE.PAN;
  if(mode==='city'){camera.fov=45;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:22,maxDistance:420,minPolarAngle:.25,maxPolarAngle:1.3,minAzimuthAngle:-Infinity,maxAzimuthAngle:Infinity});scene.fog=new THREE.Fog(0x0a0614,420,1000)}
- else{camera.fov=25;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:14,maxDistance:230,minPolarAngle:.35,maxPolarAngle:.35,minAzimuthAngle:0,maxAzimuthAngle:0});scene.fog=null}
+ else{camera.fov=25;camera.updateProjectionMatrix();Object.assign(controls,{minDistance:14,maxDistance:230,minPolarAngle:.5236,maxPolarAngle:.5236,minAzimuthAngle:0,maxAzimuthAngle:0});scene.fog=null}
  updateLighting();updateHud();updateChrome()}
 function enterTinto(){if(busyCam||tw||mode!=='city'||!G)return;closeSheet();busyCam=true;
  tweenCam(new V3(0,8,24),new V3(0,3.5,0),1000,()=>fade(1,()=>{mode='interior';applyMode();const v=interiorView();camera.position.copy(v.pos).multiplyScalar(1.5).setX(OFF);controls.target.copy(v.tg);camera.lookAt(v.tg);fade(0);tweenCam(v.pos,v.tg,1300,()=>{busyCam=false})}))}
@@ -872,7 +901,7 @@ const TUT=[
  {t:()=>'6 · Elige el barrio',x:()=>'Toca el suelo del barrio <b>El Páramo</b> (flecha), junto a La Tinto, para abrir su hoja. Ahí verás qué mercancía demandan.',at:{mode:'city',pos:()=>new V3(0,1,15)},note:()=>'No toques el edificio La Tinto: toca el suelo de la plaza.',wait:()=>SH.type==='dist'&&SH.arg===0},
  {t:()=>'7 · Mira la demanda y reparte',x:()=>'Arriba ves <b>🎯 Demanda</b> y <b>⭐ tu mejor opción</b>. Pulsa <b>🚚 Repartir</b>.',at:{mode:'city'},hl:()=>SH.type==='dist'&&!UI.deliv?'[data-act="dstart"]':null,note:()=>SH.type!=='dist'?'Vuelve a tocar el barrio El Páramo.':'',wait:()=>!!UI.deliv},
  {t:()=>`8 · Envía a ${nm('repartidor')}`,x:()=>'Elige la mercancía (⭐ la mejor) y la cantidad, y pulsa <b>Enviar reparto</b>.',at:{mode:'city'},hl:()=>UI.deliv?'[data-act="dgo"]':null,note:()=>!UI.deliv?'Pulsa Repartir en la hoja del barrio.':'',wait:()=>!!missionOf('repartidor')},
- {t:()=>'¡Listo, Boss!',x:()=>`${nm('repartidor')} camina hasta la puerta y sale en coche. <b>De día</b> manda la policía ☀ y <b>de noche</b> las bandas 🌙 (mira el reloj). Usa el <b>Almacén</b> para suministros, manda a ${nm('ojeador')} a ojear zonas y sube de nivel a tu equipo con <b>👥 Equipo</b> dentro de La Tinto. ¡Ahora corre el tiempo!`,last:true}];
+ {t:()=>'¡Listo, Boss!',x:()=>`${nm('repartidor')} camina hasta la puerta con ${nm('vendedor')} y ${nm('policia')} y salen juntos en coche. <b>De día</b> manda la policía ☀ y <b>de noche</b> las bandas 🌙 (mira el reloj). Usa el <b>Almacén</b> para suministros, manda a ${nm('ojeador')} a ojear zonas y sube de nivel a tu equipo con <b>👥 Equipo</b> dentro de La Tinto. ¡Ahora corre el tiempo!`,last:true}];
 const TUT_INFO=[
  {t:()=>'El ciclo del juego',x:()=>'Toca La Tinto → siembra, riega y cosecha en las macetas → elabora recetas en el laboratorio → sal a la ciudad y reparte desde la hoja de cada barrio.'},
  {t:()=>'Día y noche',x:()=>'El reloj de arriba muestra ☀ o 🌙. <b>De día</b> sube mucho el riesgo policial; <b>de noche</b> baja, pero aumentan las emboscadas de bandas.'},
@@ -1002,7 +1031,7 @@ function startFlow(){const u=getLocalUser();if(u)enterGame(u);else showAuth()}
 function showSelect(onPick,label,onBack){let chosen=null;
  const render=()=>{const sc=$('#sel .scr');const top=sc?sc.scrollTop:0;
  setSel(`<div class="scr"><div class="hd" style="font-size:34px;letter-spacing:.04em">LA <span style="color:var(--acc)">TINTO</span></div><div class="sub" style="margin-top:4px;text-align:center;max-width:460px">Elige quién será el Boss. Si no eliges a Jeilian, él ocupará el rol que dejes vacante.</div>
- <div class="cg">${CHARS.map(c=>`<div class="cc ${chosen===c.id?'on':''}" data-c="${c.id}"><div style="width:80px;height:80px;margin:0 auto 6px">${portrait(c)}</div><b class="hd">${c.n}</b><div class="sub" style="color:var(--acc2)">${ROLES[c.role].i} ${ROLES[c.role].s}</div><div class="sub mt-1">${c.desc}</div></div>`).join('')}</div></div>
+ <div class="cg">${CHARS.map(c=>`<div class="cc ${chosen===c.id?'on':''}" data-c="${c.id}"><div style="width:80px;height:80px;margin:0 auto 6px">${portrait(c)}</div><b class="hd">${c.n}</b><div class="sub" style="color:var(--acc2)">${ROLES[c.role].i} ${ROLES[c.role].s}</div></div>`).join('')}</div></div>
  <div id="selbar"><div class="sub" style="color:#d6cde4;min-height:34px;margin-bottom:8px">${chosen?(chosen==='jeilian'?'<b>Jeilian</b> se queda como Boss.':`<b>${charById(chosen).n}</b> será el Boss. <b>Jeilian</b> asumirá el puesto de <b>${ROLES[charById(chosen).role].n}</b>.`):'Selecciona un personaje.'}</div>
  <div class="row" style="justify-content:center">${onBack?'<button class="btn" id="backBtn" style="min-height:50px">← Volver</button>':''}<button class="btn btn-p" id="goBtn" ${chosen?'':'disabled'} style="min-width:200px;min-height:50px;font-size:15px">${esc(label||'Empezar como Boss')}</button></div></div>`);
  const s2=$('#sel .scr');if(s2)s2.scrollTop=top;
