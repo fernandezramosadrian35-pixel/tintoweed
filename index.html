@@ -824,6 +824,9 @@ const AIR_REP=10,AIR_LOCK_MSG='🔒 Requiere Reputación 10 para desbloquear el 
 const airUnlocked=()=>!!G&&Math.round(G.rep)>=AIR_REP;
 function tapAir(){if(!airUnlocked()){closeSheet();toast(AIR_LOCK_MSG+`<br><small>Tu reputación: ${Math.round(G.rep)} de ${AIR_REP}</small>`,'warn');return}openSheet('air');loadAir()}
 const raidProb=(al,dl)=>clamp(.5+.08*(al-dl),.15,.85);
+const RAID_CD=18000000;
+const raidCdLeft=()=>G&&G.lastRaidTime?Math.max(0,G.lastRaidTime+RAID_CD-Date.now()):0;
+const fmtCd=ms=>Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s';
 function pRange(lv){const p=Math.round(raidProb(G.level.alejo||1,lv)*100);return Math.max(0,p-10)+'% - '+Math.min(100,p+10)+'%'}
 function updateAirLabel(){if(!airLabel)return;const u=airUnlocked();setLabel(airLabel,u?'✈ Aeropuerto Clandestino\nUsa a Alejo para atacar\nlas bases de otros jugadores':'🔒 Aeropuerto Clandestino\nRequiere Reputación 10\nAtaca bases de otros jugadores con Alejo','#fff',u?'rgba(255,150,40,.94)':'rgba(88,62,130,.94)')}
 function makePlane(){const g=new THREE.Group(),white=M('#f2f2f5'),red=M('#d62d4a'),dark=M('#222228');
@@ -879,6 +882,7 @@ function raidBlock(){
  if(roleChar('asaltante').id!=='alejo')return 'Alejo debe ser tu asaltante (no puede ser el Boss).';
  if(G.kidnap)return 'Alejo está secuestrado.';
  if(missionOf('asaltante'))return 'Alejo ya está en misión.';
+ {const cd=raidCdLeft();if(cd>0)return `⏳ Alejo debe descansar. Disponible en: ${fmtCd(cd)}`}
  return restMsg(['asaltante'])}
 async function loadAir(){
  AIR={state:'loading',rows:[],msg:'',ev:true};if(SH.type==='air')renderSheet();
@@ -899,6 +903,7 @@ function shAir(){
  let h=`<div class="sub mb-2">Aquí usas a ${al.n} para atacar las bases de otros jugadores: vuela hasta su Tinto e intenta robar dinero y suministros. El Alejo del rival defiende automáticamente. Si ganas, te llevas parte de su botín; si pierdes, ${al.n} queda retenido 2 horas.</div>`;
  if(k&&k.pvp)h+=`<div class="card" style="border-color:var(--bad)"><b>⛓ ${al.n} retenido en la base de ${esc(k.target)}</b><div class="sub mt-1">Se libera solo en <b data-bt="kt:0"></b> (tiempo real).</div>${B(`Pagar rescate ya · ${fmt(k.ransom)} (se transfiere al defensor)`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<k.ransom})}</div>`;
  else if(k)h+=`<div class="card sub bad">⛓ ${al.n} está secuestrado por una banda rival.</div>`;
+ else if(blk.startsWith('⏳'))h+=`<div class="card sub warn">⏳ Alejo debe descansar. Disponible en: <b data-bt="rc:0"></b></div>`;
  else if(blk)h+=`<div class="card sub warn">${esc(blk)}</div>`;
  h+=B('🔄 Actualizar objetivos','airrefresh',{c:'btn-g w-full mb-2'});
  if(S==='loading')return h+'<div class="sub" style="text-align:center;padding:12px">Buscando objetivos…</div><div class="spin" style="margin:0 auto 14px"></div>';
@@ -917,7 +922,7 @@ function shAir(){
  const notes=G.notes||[];if(notes.length)h+=`<div class="hd mt-3 mb-2">Avisos recientes</div>`+notes.map(n=>`<div class="card sub" style="padding:8px">${esc(n.txt)}</div>`).join('');
  return h}
 function startRaid(u){const b=raidBlock();if(b)return toast(b,'bad');if(!AIR.ev)return toast('Falta la tabla latinto_events en Supabase','bad');
- startMission({type:'raid',role:'asaltante',chars:[roleChar('asaltante').id],dest:MOTO_SPOT.clone(),speed:9,wait:40,data:{target:u},txt:'Vuelo de asalto'});
+ startMission({type:'raid',role:'asaltante',chars:[roleChar('asaltante').id],dest:MOTO_SPOT.clone(),speed:9,wait:40,data:{target:u,prevRaid:G.lastRaidTime||0},txt:'Vuelo de asalto'});G.lastRaidTime=Date.now();saveGame(false);
  toast(`✈ ${charById('alejo').n} parte al aeródromo para infiltrarse en la base de ${esc(u)}`);sfx('click')}
 async function insertEvent(ev){try{const r=await withTimeout(supabase.from('latinto_events').insert({target:ev.target,attacker:ev.attacker,kind:ev.kind,money:ev.money||0,items:ev.items||{},applied:false}),9000);return r.error?{ok:false,err:r.error}:{ok:true}}catch(e){return{ok:false,err:e}}}
 /* Resolución del asalto: Alejo atacante vs Alejo defensor. Probabilidad 50 % ±8 % por nivel de diferencia (15–85 %). */
@@ -944,7 +949,7 @@ async function resolveRaid(m){
    insertEvent({target:t,attacker:USER.username,kind:'defended',money:0,items:{}});
    G.missions=G.missions.filter(x=>x!==m);m.data.result='fail';
    toast(`⛓ ¡El asalto a ${esc(t)} fracasó! ${al} queda retenido 2 horas. Rescate inmediato: ${fmt(ransom)}.`,'bad');floatText('CAPTURADO','#fb7185')}
- }catch(e){console.warn('[La Tinto] asalto cancelado',e);m.data.result='error';toast('El asalto se canceló: no se pudo contactar con la base de datos. Alejo vuelve sin botín.','bad')}
+ }catch(e){console.warn('[La Tinto] asalto cancelado',e);m.data.result='error';G.lastRaidTime=m.data.prevRaid||0;toast('El asalto se canceló: no se pudo contactar con la base de datos. Alejo vuelve sin botín y el descanso no se aplica.','bad')}
  saveGame(false)}
 /* Eventos recibidos (robos, rescates, defensas): se aplican al conectarse y cada ~30 s */
 function note(txt){G.notes=G.notes||[];G.notes.unshift({t:Date.now(),txt});G.notes.length=Math.min(G.notes.length,10)}
@@ -962,7 +967,7 @@ async function pollEvents(){
   for(const ev of (r.data||[])){const c=await withTimeout(supabase.from('latinto_events').update({applied:true}).eq('id',ev.id).eq('applied',false).select('id'),8000);if(c.error||!c.data||!c.data.length)continue;applyEvent(ev);n++}
  }catch(e){console.warn('[La Tinto] eventos',e)}
  polling=false;if(n)saveGame(false)}
-function kidCheck(){const k=G.kidnap;if(k&&k.pvp&&Date.now()>=k.until){G.kidnap=null;ich[k.id].vis=false;toast('⛓ Alejo ha escapado tras 2 horas de cautiverio y vuelve a La Tinto.','ok');markDirty();saveGame(false)}}
+function kidCheck(){const cdNow=raidCdLeft()>0;if(UI.cdWas&&!cdNow)markDirty();UI.cdWas=cdNow;const k=G.kidnap;if(k&&k.pvp&&Date.now()>=k.until){G.kidnap=null;ich[k.id].vis=false;toast('⛓ Alejo ha escapado tras 2 horas de cautiverio y vuelve a La Tinto.','ok');markDirty();saveGame(false)}}
 function shSettings(){const guest=USER&&USER.guest,cl={ok:'☁ Sincronizado',busy:'☁ Sincronizando…',err:'⚠ Error de nube: se guarda en local',off:guest?'💾 Solo en este dispositivo':'📴 Sin conexión: se guarda en local'}[cloudState]||'';
  return['Ajustes',`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">👤 ${esc(USER?USER.username:'—')}</b><span class="chip ${cloudState==='ok'?'ok':cloudState==='err'?'bad':'warn'}">${cl}</span></div><div class="sub mt-1">Autoguardado cada 10 s en el dispositivo${guest?'.':' y en la nube.'}</div></div>
  <div class="grid2">${B('❓ Tutorial','tut')}${B('💾 Guardar ahora','save')}${B(UI.mute?'🔇 Sonido apagado':'🔊 Sonido activo','mute')}${B('🚪 Cerrar sesión','logout')}</div>${B('🏆 Clasificación online','rank',{c:'btn-o w-full mt-2'})}${B('🗑 Nueva partida','newgame',{c:'btn-r w-full mt-2'})}
@@ -973,7 +978,7 @@ function renderSheet(){if(!G||!SH.type)return;let r;
 function renderStrip(){if(!G)return;const ic={expedition:'🚗',delivery:'🚚',scout:'👁',assault:'🏍',raid:'✈'};
  $('#mstrip').innerHTML=G.missions.map(m=>`<div class="ms"><div class="row sp"><span>${ic[m.type]} ${m.txt}</span><span data-bt="mp:${m.role}" style="color:var(--mut)"></span></div>${bar('ms:'+m.role,m.type==='assault'?'#fb7185':'#2dd4bf')}</div>`).join('')+(G.kidnap?`<div class="ms" style="border-color:var(--bad)">⛓ ${charById(G.kidnap.id).n} secuestrado${G.kidnap.pvp?' · <span data-bt="kt:0"></span>':''}</div>`:'')}
 function pctOf(k){const[a,b]=k.split(':');switch(a){case'pg':{const p=G.plots[+b];return p.state==='ready'?100:p.growth*100}case'pw':return G.plots[+b].water;case'ms':{const m=missionOf(b);return m&&!m.pre?clamp(m.t/(2*m.d/m.speed+m.wait),0,1)*100:0}case'q':return(G.tabs[+b]?G.tabs[+b].p:0)*100;case'tr':return G.d[+b].trust}return 0}
-function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}if(a==='kt'){const k=G.kidnap;if(!k||!k.pvp)return'';const ms=k.until-Date.now();if(ms<=0)return'ya';return Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s'}return''}
+function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}if(a==='rc'){const ms=raidCdLeft();return ms>0?fmtCd(ms):'ya'}if(a==='kt'){const k=G.kidnap;if(!k||!k.pvp)return'';const ms=k.until-Date.now();if(ms<=0)return'ya';return Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s'}return''}
 function updateBinds(){$$('[data-bp]').forEach(e=>e.style.width=pctOf(e.dataset.bp)+'%');$$('[data-bt]').forEach(e=>e.textContent=txtOf(e.dataset.bt))}
 function phaseOfDay(h){return h>=5&&h<8?['🌅','Amanecer']:h>=8&&h<18?['☀️','Día']:h>=18&&h<21?['🌇','Atardecer']:['🌙','Noche']}
 function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=hourNow(),ph=phaseOfDay(h),dn=dayness(h);
