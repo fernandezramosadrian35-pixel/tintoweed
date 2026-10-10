@@ -115,6 +115,7 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
 .inp:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(45,212,191,.25)}
 .spin{width:44px;height:44px;border-radius:50%;border:5px solid rgba(255,255,255,.15);border-top-color:var(--acc);margin-top:18px;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.pill .hs small{font-size:10px;color:#cdbfe3;line-height:1.1}
 </style>
 </head>
 <body>
@@ -123,7 +124,7 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
 <header id="hud">
   <div class="pill money" id="hMoneyP"><span class="ic">💰</span><b id="hMoney">0 €</b></div>
   <div class="pill" id="hClock"><span class="ic big" id="hSun">☀️</span><div class="hs"><small id="hDay">Día 1</small><b id="hTime">08:00</b><em id="hRisk"></em></div></div>
-  <div class="pill"><span class="ic">⭐</span><b id="hRep">0</b></div>
+  <div class="pill"><span class="ic">⭐</span><div class="hs"><b id="hRep">0</b><small id="hLvl">Nv 1</small></div></div>
   <div class="pill heat"><span class="ic">🔥</span><div class="bar"><i id="hHeat" style="background:linear-gradient(90deg,#fbbf24,#ef4444)"></i></div></div>
 </header>
 <div id="sidebtns"><button class="rbtn" id="hSpeed" data-act="speed" aria-label="Pausar o reanudar">▶</button><button class="rbtn" data-act="rank" aria-label="Clasificación online">🏆</button><button class="rbtn" data-act="settings" aria-label="Ajustes">⚙<i id="cdot"></i></button></div>
@@ -680,7 +681,7 @@ const ACT={
  dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor','vendedor','policia']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
   startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id,roleChar('vendedor').id,roleChar('policia').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
   toast(`🚚 ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} preparan la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
- air(){openSheet('air');loadAir()},airrefresh(){loadAir()},raid(d){startRaid(d.u)},
+ air(){tapAir()},airrefresh(){loadAir()},raid(d){startRaid(d.u)},
  async ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;
   if(k.pvp){if(!supabase||!USER||USER.guest||!online())return toast('Necesitas conexión para pagar el rescate al jugador defensor','bad');
    const r=await insertEvent({target:k.target,attacker:USER.username,kind:'ransom',money:k.ransom,items:{}});if(!r.ok)return toast('No se pudo registrar el pago del rescate. Inténtalo de nuevo.','bad');
@@ -819,7 +820,14 @@ function shRank(){
  return h+'<div class="sub mt-2">Las estrellas son tu reputación. Se actualizan con el autoguardado (cada 10 s).</div>'}
 /* ====================== AEROPUERTO CLANDESTINO Y ASALTOS ENTRE JUGADORES ====================== */
 const MOTO_SPOT=new V3(112,0,-12),PARK=new V3(118,0,-24);
-let plane=null,planeEmit=0;
+let plane=null,planeEmit=0,airLabel=null;
+const AIR_REQ=10,AIR_LOCK_MSG='🔒 Requiere Nivel 10 para desbloquear el Aeropuerto Clandestino';
+const empireLevel=()=>Math.min(10,1+Math.floor((G?G.rep:0)/10));
+const airUnlocked=()=>empireLevel()>=AIR_REQ;
+function tapAir(){if(!airUnlocked()){closeSheet();toast(AIR_LOCK_MSG+`<br><small>Tu nivel de imperio: ${empireLevel()} (reputación ${Math.round(G.rep)} de ${(AIR_REQ-1)*10})</small>`,'warn');return}openSheet('air');loadAir()}
+const raidProb=(al,dl)=>clamp(.5+.08*(al-dl),.15,.85);
+function pRange(lv){const p=Math.round(raidProb(G.level.alejo||1,lv)*100);return Math.max(0,p-10)+'% - '+Math.min(100,p+10)+'%'}
+function updateAirLabel(){if(!airLabel)return;const u=airUnlocked();setLabel(airLabel,u?'✈ Aeropuerto Clandestino\nUsa a Alejo para atacar\nlas bases de otros jugadores':'🔒 Aeropuerto Clandestino\nRequiere Nivel 10\nAtaca bases de otros jugadores con Alejo','#fff',u?'rgba(255,150,40,.94)':'rgba(88,62,130,.94)')}
 function makePlane(){const g=new THREE.Group(),white=M('#f2f2f5'),red=M('#d62d4a'),dark=M('#222228');
  const t=m=>{m.userData={kind:'air'};cityClick.push(m);return m};
  const body=t(cyl(.9,.6,6.4,white,0,1.5,0,g,12));body.rotation.x=Math.PI/2;
@@ -842,7 +850,7 @@ function buildAirport(){
  [[108,-14],[106.4,-14.6],[108.2,-15.8]].forEach(a=>cyl(.6,.6,1.2,M('#b45309'),a[0],.6,a[1],g,10));
  cyl(.08,.08,4,M('#555'),131.5,2,30,g,6);const cone=new THREE.Mesh(new THREE.ConeGeometry(.5,2.4,8),M('#ff7a1a'));cone.rotation.z=-Math.PI/2;cone.position.set(132.9,4.2,30);g.add(cone);
  plane=makePlane();plane.position.copy(PARK);g.add(plane);
- const lab=makeLabel('✈ Aeropuerto clandestino\n👆 Vuelos de asalto',{w:512,h:140,font:34,scale:[16,4.4],bg:'rgba(255,150,40,.94)'});lab.position.set(118,12,-6);g.add(lab);bobs.push({s:lab,y0:12,di:'air',ph:3})}
+ airLabel=makeLabel('',{w:720,h:190,font:31,scale:[19,5]});airLabel.position.set(118,13,-6);g.add(airLabel);bobs.push({s:airLabel,y0:13,di:'air',ph:3});updateAirLabel()}
 function updatePlane(rm,t,rdt){if(!plane)return;
  let p=-1;if(rm&&!rm.pre){const T1=rm.d/rm.speed;if(rm.t>=T1&&rm.t<=T1+rm.wait)p=(rm.t-T1)/rm.wait}
  const spin=plane.userData.prop;
@@ -867,6 +875,7 @@ const hasRare=ing=>Object.entries(ing||{}).some(e=>ingOf(e[0])&&ingOf(e[0]).rar>
 function fuzz(u){let h=0;const s=u+Math.floor(Date.now()/3.6e6);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return .8+((h>>>0)%1000)/1000*.45}
 function estLoot(r){const f=fuzz(r.u);return{lo:Math.round(r.money*.05*f/50)*50,hi:Math.round(r.money*.15*f/50)*50,ransom:Math.max(300,Math.round((r.money*.10+ingValue(r.ing)*.125)*f*.8/50)*50)}}
 function raidBlock(){
+ if(!airUnlocked())return AIR_LOCK_MSG;
  if(!supabase||!USER||USER.guest)return 'Necesitas una cuenta para asaltar a otros jugadores.';
  if(!online())return 'Necesitas conexión a internet.';
  if(roleChar('asaltante').id!=='alejo')return 'Alejo debe ser tu asaltante (no puede ser el Boss).';
@@ -878,10 +887,10 @@ async function loadAir(){
  if(!supabase)AIR.state='nosb';else if(!online())AIR.state='offline';else if(!USER||USER.guest)AIR.state='guest';
  else{try{
   let rows;
-  try{const r=await withTimeout(supabase.from('latinto_profiles').select('username,rep:save_data->>rep,money:save_data->>money,ing:save_data->inv->ing').neq('username',USER.username).limit(200),10000);if(r.error)throw r.error;
-   rows=(r.data||[]).map(x=>({u:x.username,rep:parseFloat(x.rep)||0,money:Math.max(0,parseFloat(x.money)||0),ing:normIng(x.ing)}))}
+  try{const r=await withTimeout(supabase.from('latinto_profiles').select('username,rep:save_data->>rep,money:save_data->>money,ing:save_data->inv->ing,alv:save_data->level->>alejo').neq('username',USER.username).limit(200),10000);if(r.error)throw r.error;
+   rows=(r.data||[]).map(x=>({u:x.username,rep:parseFloat(x.rep)||0,money:Math.max(0,parseFloat(x.money)||0),ing:normIng(x.ing),lv:Math.max(1,parseInt(x.alv)||1)}))}
   catch(e1){console.warn('[La Tinto] lectura directa no disponible, se lee save_data',e1);const r=await withTimeout(supabase.from('latinto_profiles').select('username,save_data').neq('username',USER.username).limit(200),12000);if(r.error)throw r.error;
-   rows=(r.data||[]).map(x=>{const sd=normSave(x.save_data);return{u:x.username,rep:sd?(+sd.rep||0):0,money:sd?Math.max(0,+sd.money||0):0,ing:sd&&sd.inv?normIng(sd.inv.ing):{}}})}
+   rows=(r.data||[]).map(x=>{const sd=normSave(x.save_data);return{u:x.username,rep:sd?(+sd.rep||0):0,money:sd?Math.max(0,+sd.money||0):0,ing:sd&&sd.inv?normIng(sd.inv.ing):{},lv:sd&&sd.level?Math.max(1,parseInt(sd.level.alejo)||1):1}})}
   rows.sort((a,b)=>b.rep-a.rep||String(a.u).localeCompare(String(b.u)));
   AIR={state:'ok',rows:rows.slice(0,40),msg:'',ev:true};
   try{const pr=await withTimeout(supabase.from('latinto_events').select('id').limit(1),6000);if(pr.error){AIR.ev=false;AIR.msg=pr.error.message}}catch(e2){AIR.ev=false;AIR.msg=String(e2&&e2.message||e2)}
@@ -889,7 +898,7 @@ async function loadAir(){
  if(SH.type==='air')renderSheet()}
 function shAir(){
  const k=G.kidnap,al=charById('alejo'),S=AIR.state,blk=raidBlock();
- let h=`<div class="sub mb-2">Un vuelo clandestino infiltra a ${al.n} en la base de otro jugador. Su Alejo defiende automáticamente: el resultado es incierto y nunca se revela el nivel del rival.</div>`;
+ let h=`<div class="sub mb-2">Aquí usas a ${al.n} para atacar las bases de otros jugadores: vuela hasta su Tinto e intenta robar dinero y suministros. El Alejo del rival defiende automáticamente. Si ganas, te llevas parte de su botín; si pierdes, ${al.n} queda retenido 2 horas.</div>`;
  if(k&&k.pvp)h+=`<div class="card" style="border-color:var(--bad)"><b>⛓ ${al.n} retenido en la base de ${esc(k.target)}</b><div class="sub mt-1">Se libera solo en <b data-bt="kt:0"></b> (tiempo real).</div>${B(`Pagar rescate ya · ${fmt(k.ransom)} (se transfiere al defensor)`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<k.ransom})}</div>`;
  else if(k)h+=`<div class="card sub bad">⛓ ${al.n} está secuestrado por una banda rival.</div>`;
  else if(blk)h+=`<div class="card sub warn">${esc(blk)}</div>`;
@@ -904,7 +913,7 @@ function shAir(){
  if(!AIR.rows.length)h+='<div class="card sub">Todavía no hay otros jugadores registrados.</div>';
  AIR.rows.forEach(r=>{const e=estLoot(r),tot=ingTotal(r.ing),st=tot>=40?'abundantes':tot>=15?'moderados':'escasos';
   h+=`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">${esc(r.u)}</b><span class="hd warn" style="font-size:17px">⭐ ${Math.round(r.rep)}</span></div>
-  <div class="sub mt-1">💰 Botín estimado: <b>≈ ${fmt(e.lo)} – ${fmt(e.hi)}</b></div><div class="sub">📦 Suministros ${st}${hasRare(r.ing)?' · ✨ ingredientes raros':''}</div>
+  <div class="sub mt-1">🎯 Probabilidad de éxito: <b class="ok">${pRange(r.lv)}</b></div><div class="sub">💰 Botín estimado: <b>≈ ${fmt(e.lo)} – ${fmt(e.hi)}</b></div><div class="sub">📦 Suministros ${st}${hasRare(r.ing)?' · ✨ ingredientes raros':''}</div>
   <div class="sub">⛓ Si falla: Alejo retenido 2 h · rescate ≈ ${fmt(e.ransom)}</div>
   ${B('🥷 Lanzar asalto con Alejo','raid',{c:'btn-r w-full mt-2',d:{u:r.u},dis:!!blk||!AIR.ev})}</div>`});
  const notes=G.notes||[];if(notes.length)h+=`<div class="hd mt-3 mb-2">Avisos recientes</div>`+notes.map(n=>`<div class="card sub" style="padding:8px">${esc(n.txt)}</div>`).join('');
@@ -921,7 +930,7 @@ async function resolveRaid(m){
   if(rr.error)throw rr.error;if(!rr.data)throw new Error('el objetivo ya no existe');
   let dm=Math.max(0,parseFloat(rr.data.money)||0);const ing=Object.assign({},normIng(rr.data.ing)),dl=Math.max(1,parseInt(rr.data.alv)||1);
   try{const pe=await withTimeout(supabase.from('latinto_events').select('money').eq('target',t).eq('applied',false).eq('kind','robbery'),6000);if(!pe.error&&Array.isArray(pe.data))dm=Math.max(0,dm-pe.data.reduce((a,x)=>a+(+x.money||0),0))}catch(e){}
-  const p=clamp(.5+.08*((G.level.alejo||1)-dl),.15,.85);
+  const p=raidProb(G.level.alejo||1,dl);
   if(Math.random()<p){
    const money=Math.round(dm*rnd(.05,.15)),names=Object.keys(ing).filter(k=>ingOf(k)&&(+ing[k]||0)>0);
    for(let i=names.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[names[i],names[j]]=[names[j],names[i]]}
@@ -972,7 +981,7 @@ function phaseOfDay(h){return h>=5&&h<8?['🌅','Amanecer']:h>=8&&h<18?['☀️'
 function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=hourNow(),ph=phaseOfDay(h),dn=dayness(h);
  $('#hSun').textContent=ph[0];$('#hDay').textContent=`Día ${G.day} · ${ph[1]}`;$('#hTime').textContent=String(Math.floor(h)).padStart(2,'0')+':'+String(Math.floor(h%1*60)).padStart(2,'0');
  $('#hRisk').textContent=dn>.5?'👮 Policía alta':'🗡 Bandas altas';$('#hClock').classList.toggle('night',dn<.5);
- $('#hRep').textContent=Math.round(G.rep);$('#hHeat').style.width=G.heat+'%';$('#hSpeed').innerHTML=UI.speed===0?'⏸<small style="display:block;font-size:10px;line-height:1">x0</small>':'▶<small style="display:block;font-size:10px;line-height:1">x1</small>'}
+ $('#hRep').textContent=Math.round(G.rep);$('#hLvl').textContent='Nv '+empireLevel();$('#hHeat').style.width=G.heat+'%';$('#hSpeed').innerHTML=UI.speed===0?'⏸<small style="display:block;font-size:10px;line-height:1">x0</small>':'▶<small style="display:block;font-size:10px;line-height:1">x1</small>'}
 function updateChrome(){$('#fabL').textContent=mode==='city'?'🏠 Entrar a La Tinto':'🏙 Ciudad';$('#fabR').style.display=mode==='interior'?'':'none';
  $('#hint').textContent=mode==='city'?'1 dedo: mover · 2 dedos: zoom y rotar · Toca La Tinto, el Almacén, un barrio o una zona':'1 dedo: mover · pellizca: zoom · Toca parcelas, mesas de laboratorio o personajes';
  $('#hint').style.opacity=SH.type||tut.active?0:1;$('#fabs').style.display=SH.type&&innerWidth<760?'none':'flex'}
@@ -1017,7 +1026,7 @@ function pick(e){const r=renderer.domElement.getBoundingClientRect();mouse.set((
 renderer.domElement.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,t:performance.now()}});
 renderer.domElement.addEventListener('pointerup',e=>{if(!pd||!G||!started||busyCam||tw)return;const d=Math.hypot(e.clientX-pd.x,e.clientY-pd.y),t=performance.now()-pd.t;pd=null;if(d>10||t>650)return;
  const h=pick(e);if(!h){return}const u=h.object.userData;sfx('click');
- if(mode==='city'){if(u.kind==='tinto')enterTinto();else if(u.kind==='wh')openSheet('wh');else if(u.kind==='air'){openSheet('air');loadAir()}else if(u.kind==='zone')openSheet('zone',u.i);else if(u.kind==='district')selectDistrict(u.di)}
+ if(mode==='city'){if(u.kind==='tinto')enterTinto();else if(u.kind==='wh')openSheet('wh');else if(u.kind==='air')tapAir();else if(u.kind==='zone')openSheet('zone',u.i);else if(u.kind==='district')selectDistrict(u.di)}
  else{if(u.kind==='plot')openSheet('plot',u.i);else if(u.kind==='lab')openSheet('lab');else if(u.kind==='char')openSheet('char',u.id)}});
 function selectDistrict(i){UI.selD=i;const D=DIST[i];selFrame.visible=true;selFrame.position.set(D.gx*38,0,D.gz*38);openSheet('dist',i)}
 /* Evita que la hoja se redibuje mientras el dedo está pulsando (botones que no respondían) */
@@ -1243,7 +1252,7 @@ function updateCity(rdt,t){
   const names=m.chars.map(id=>charById(id).n).join(' + '),st=['En camino','Actuando…','Volviendo'][ph];
   if(o.userData.label&&m.type!=='assault')setLabel(o.userData.label,`${names}\n${st}`);
   if(veh&&moving&&emit){const ex=o.userData.exhaust,a=o.userData.ang||0,c=Math.cos(a),s=Math.sin(a);spawnFx(p.x+ex[0]*c+ex[2]*s,ex[1],p.z-ex[0]*s+ex[2]*c,rnd(-.3,.3),rnd(.5,1),rnd(-.3,.3),m.type==='assault'?'#9ca3af':'#6b7280',m.type==='assault'?.8:1.1,1.2,{grow:1.8,add:false,op:.45})}});
- updatePlane(G.missions.find(x=>x.type==='raid'&&!x.pre),t,rdt);
+ updatePlane(G.missions.find(x=>x.type==='raid'&&!x.pre),t,rdt);updateAirLabel();
  if(tintoMat)tintoMat.emissiveIntensity=.06+NF*(.9+Math.sin(t*2)*.15);if(beam){beam.visible=NF>.06;beam.material.opacity=NF*(.4+Math.sin(t*1.6)*.06)}bobs.forEach(b=>{b.s.position.y=b.y0+Math.sin(t*3+b.ph)*.45});
  if(selFrame.visible)selFrame.children.forEach(m=>m.scale.y=1+Math.sin(t*4)*.2);
  ZN.forEach((Z,zi)=>{const c=zoneG[zi].userData.crystal;if(c){c.rotation.y=t*.8;c.position.y=3+Z.tier*.4+Math.sin(t*1.5+zi)*.3}})}
