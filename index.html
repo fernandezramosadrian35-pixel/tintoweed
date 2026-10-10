@@ -384,13 +384,13 @@ function buildCity(){
  // estrellas
  const pos=new Float32Array(900);for(let i=0;i<300;i++){const a=Math.random()*Math.PI*2,e=Math.random()*1.3+.12,r=700;pos[i*3]=Math.cos(a)*Math.cos(e)*r;pos[i*3+1]=Math.sin(e)*r;pos[i*3+2]=Math.sin(a)*Math.cos(e)*r}
  const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(pos,3));stars=new THREE.Points(sg,new THREE.PointsMaterial({color:'#ffffff',size:2.2,sizeAttenuation:false,transparent:true,opacity:0,depthWrite:false,fog:false}));scene.add(stars);
- buildZones();buildForest()}
+ buildZones();buildForest();buildAirport()}
 function distSeg(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;let t=((px-ax)*dx+(pz-az)*dz)/l2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),pz-(az+t*dz))}
 /* Bosque denso alrededor de la ciudad: pinos, árboles de hoja y rocas con InstancedMesh (barato de dibujar) */
 function buildForest(){
  const rand=mulberry(424242),dummy=new THREE.Object3D(),col=new THREE.Color();
- const segs=ZN.map(Z=>{const nn=nearestNode(new V3(Z.x,0,Z.z));return[nn.x,nn.z,Z.x,Z.z]});
- const clear=(x,z)=>{if(Math.abs(x)<69&&Math.abs(z)<69)return false;for(const n of segs){if(Math.hypot(x-n[2],z-n[3])<14)return false;if(distSeg(x,z,n[0],n[1],n[2],n[3])<4.5)return false}return true};
+ const segs=ZN.map(Z=>{const nn=nearestNode(new V3(Z.x,0,Z.z));return[nn.x,nn.z,Z.x,Z.z]});{const nn=nearestNode(MOTO_SPOT);segs.push([nn.x,nn.z,MOTO_SPOT.x,MOTO_SPOT.z])}
+ const clear=(x,z)=>{if(Math.abs(x)<69&&Math.abs(z)<69)return false;if(x>98&&x<152&&z>-50&&z<54)return false;for(const n of segs){if(Math.hypot(x-n[2],z-n[3])<14)return false;if(distSeg(x,z,n[0],n[1],n[2],n[3])<4.5)return false}return true};
  const NP=1200,ND=600,NR=360;
  const trunkG=new THREE.CylinderGeometry(.3,.45,2.6,6),c1=new THREE.ConeGeometry(2.4,5,7),c2=new THREE.ConeGeometry(1.7,4,7),crownG=new THREE.IcosahedronGeometry(2.4,0),rockG=new THREE.DodecahedronGeometry(1,0);
  const mTrunk=new THREE.MeshStandardMaterial({color:'#5a3d28',roughness:1}),mLeaf=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.9}),mRock=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true});
@@ -604,7 +604,7 @@ function simulate(dt){
  // misiones
  for(const m of [...G.missions]){
   if(m.pre){m.preT+=dt;if(m.chars.every(id=>atPos(id,DOOR,.9))||m.preT>40){m.pre=false;markDirty()}continue}
-  m.t+=dt*ef;const T1=m.d/m.speed,T=2*T1+m.wait;
+  if(m.hold)continue;m.t+=dt*ef;const T1=m.d/m.speed,T=2*T1+m.wait;
   if(!m.arrived&&m.t>=T1+m.wait){m.arrived=true;if(MIS[m.type].arrive(m)==='remove'){G.missions=G.missions.filter(x=>x!==m);markDirty();continue}markDirty()}
   if(m.t>=T){MIS[m.type].done(m);G.missions=G.missions.filter(x=>x!==m);m.chars.forEach(id=>{G.brk[id]=BRK(G.roleOf[id])});markDirty()}}
 }
@@ -627,6 +627,7 @@ const MIS={
   done(){toast(`${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} vuelven a La Tinto.`)}},
  scout:{arrive(m){if(m.data.z!==undefined){G.zones[m.data.z].scouted=true;refreshZone(m.data.z);toast(`👁 ${nm('ojeador')} ojea ${ZN[m.data.z].n}: ya puedes enviar viajes de búsqueda.`,'ok')}
   else{const S=G.d[m.data.di],l=lvl('ojeador'),g=5+1.3*l+rnd(-1,2);S.trust=Math.min(100,S.trust+g);S.scouted=true;toast(`👁 ${nm('ojeador')} analiza ${DIST[m.data.di].n}: confianza +${g.toFixed(1)}`,'ok')}},done(){}},
+ raid:{arrive(m){m.hold=true;resolveRaid(m).then(()=>{m.hold=false;markDirty()}).catch(e=>{console.warn(e);m.hold=false})},done(m){toast(m.data.result==='ok'?'Alejo vuelve a La Tinto con el botín.':'Alejo vuelve a La Tinto.',m.data.result==='ok'?'ok':'')}},
  assault:{arrive(m){const di=m.data.di,S=G.d[di],D=DIST[di],l=lvl('asaltante'),ch=clamp(.2+.04*l+S.trust*.004,.1,.9),pos=dpos(di),who=roleChar('asaltante');
   if(Math.random()<ch){const loot=Math.round((150+Math.random()*250)*(1+.15*l)*D.loot);gain(loot,pos);G.heat=Math.min(100,G.heat+3);m.data.goods=Math.random()<.4;toast(`🥷 ${who.n} asalta a ${D.rival}: botín de ${fmt(loot)}`,'ok')}
   else if(S.trust<35&&who.id==='alejo'&&Math.random()<.6){G.kidnap={id:who.id,di,ransom:350+120*l};S.trust=Math.max(0,S.trust-3);toast(`⛓ ¡Alejo ha sido secuestrado por ${D.rival}! Paga el rescate (${fmt(G.kidnap.ransom)}).`,'bad');floatText('SECUESTRADO','#fb7185',pos);return 'remove'}
@@ -679,7 +680,13 @@ const ACT={
  dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor','vendedor','policia']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
   startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id,roleChar('vendedor').id,roleChar('policia').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
   toast(`🚚 ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} preparan la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
- ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;G.money-=k.ransom;toast(`${charById(k.id).n} es rescatado y vuelve a La Tinto.`,'ok');G.kidnap=null;const o=ich[k.id];o.vis=false}
+ air(){openSheet('air');loadAir()},airrefresh(){loadAir()},raid(d){startRaid(d.u)},
+ async ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;
+  if(k.pvp){if(!supabase||!USER||USER.guest||!online())return toast('Necesitas conexión para pagar el rescate al jugador defensor','bad');
+   const r=await insertEvent({target:k.target,attacker:USER.username,kind:'ransom',money:k.ransom,items:{}});if(!r.ok)return toast('No se pudo registrar el pago del rescate. Inténtalo de nuevo.','bad');
+   G.money=Math.max(0,G.money-k.ransom);if(G.kidnap===k){G.kidnap=null;ich[k.id].vis=false}
+   toast(`${charById(k.id).n} liberado: ${fmt(k.ransom)} transferidos a ${esc(k.target)}.`,'ok');sfx('coin');markDirty();saveGame(false);return}
+  G.money-=k.ransom;toast(`${charById(k.id).n} es rescatado y vuelve a La Tinto.`,'ok');G.kidnap=null;const o=ich[k.id];o.vis=false}
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(!f)return;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');if(!G&&!['tut','settings','sclose'].includes(b.dataset.act))return;f(b.dataset);markDirty()});
 
@@ -704,7 +711,7 @@ function charCard(r,full){const c=roleChar(r),l=G.level[c.id],R=ROLES[r],st=stat
  let h=`<div class="card"><div class="row" style="align-items:flex-start"><div style="width:${full?72:52}px;height:${full?72:52}px;flex:none">${portrait(c)}</div><div class="grow"><div class="row sp"><b class="hd">${c.n}</b><span class="chip ${st[1]}">${st[0]}</span></div>
  <div class="sub" style="color:var(--acc2)">${R.i} ${R.n}</div><div class="sub mt-1">${r==='boss'?R.d:effText(r,l)}</div></div></div>`;
  if(r!=='boss')h+=`<div class="row sp mt-2"><div><div>${Array.from({length:10},(_,k)=>`<span class="pip ${k<l?'on':''}"></span>`).join('')}</div><div class="sub">Nv ${l} · ${fmt(salary(r,l))}/semana</div></div>${l<10?B(`Nivel ${l+1} · ${fmt(cost)}`,'up',{c:'btn-p',d:{id:c.id},dis:G.money<cost}):'<span class="chip ok">Nivel máx.</span>'}</div>`;
- if(G.kidnap&&G.kidnap.id===c.id)h+=B(`Pagar rescate · ${fmt(G.kidnap.ransom)}`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<G.kidnap.ransom});
+ if(G.kidnap&&G.kidnap.id===c.id){if(G.kidnap.pvp)h+=`<div class="sub bad mt-2">⛓ Retenido en la base de ${esc(G.kidnap.target)} · libre en <b data-bt="kt:0"></b></div>`;h+=B(`Pagar rescate · ${fmt(G.kidnap.ransom)}`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<G.kidnap.ransom})}
  return h+'</div>'}
 function shPlot(i){const p=G.plots[i];
  if(i>=G.plotCount)return[`Parcela ${i+1} · bloqueada`,`<div class="card">${i===G.plotCount?B(`＋ Ampliar plantación · ${fmt(plotCost())}`,'buyplot',{c:'btn-p w-full',dis:G.money<plotCost()}):'<div class="sub">Amplía primero las parcelas anteriores.</div>'}</div>`];
@@ -775,7 +782,7 @@ function shDist(di){const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInf
    <div class="row mt-2">${B('Cancelar','dcancel',{c:'grow'})}${B('🚚 Enviar reparto','dgo',{c:'btn-p grow',dis:!!missionOf('repartidor')})}</div></div>`}}
  if(!UI.deliv){h+=`<div class="grid2">${B('🚚 Repartir','dstart',{c:'btn-g',d:{v:di},dis:!!missionOf('repartidor')})}${B('👁 Ojear · 25 €','dscout',{d:{v:di},dis:!!missionOf('ojeador')||G.money<25})}</div>`;
   if(di)h+=B('🏍 Asaltar a '+D.rival,'dassault',{c:'btn-r w-full mt-2',d:{v:di},dis:!!missionOf('asaltante')||!!G.kidnap});
-  if(G.kidnap)h+=`<div class="card mt-2" style="border-color:var(--bad)"><b>⛓ ${charById(G.kidnap.id).n} secuestrado en ${DIST[G.kidnap.di].n}</b>${B(`Pagar rescate · ${fmt(G.kidnap.ransom)}`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<G.kidnap.ransom})}</div>`;
+  if(G.kidnap)h+=`<div class="card mt-2" style="border-color:var(--bad)"><b>⛓ ${charById(G.kidnap.id).n} ${G.kidnap.pvp?'retenido en la base de '+esc(G.kidnap.target):'secuestrado en '+DIST[G.kidnap.di].n}</b>${B(`Pagar rescate · ${fmt(G.kidnap.ransom)}`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<G.kidnap.ransom})}</div>`;
   if(missionOf('repartidor'))h+=`<div class="sub mt-2">${nm('repartidor')} ya está de reparto.</div>`}
  return[D.n,h]}
 function shTeam(){let h=`<div class="card"><div class="row sp"><div><b class="hd">Nómina semanal</b><div class="sub">Próximo pago en ${PAY_EVERY-(G.day-G.lastPay)} día(s)</div></div><b class="hd warn" style="font-size:18px">${fmt(payroll())}</b></div>${G.owed>0?`<div class="sub bad mt-1">⚠ Pendiente ${fmt(G.owed)} · el equipo trabaja a medio ritmo</div>`:''}</div>`;
@@ -810,17 +817,156 @@ function shRank(){
  h+=rows.slice(0,50).map(line).join('');
  if(me>=50)h+=`<div class="sub" style="text-align:center">⋯</div>`+line(rows[me],me);
  return h+'<div class="sub mt-2">Las estrellas son tu reputación. Se actualizan con el autoguardado (cada 10 s).</div>'}
+/* ====================== AEROPUERTO CLANDESTINO Y ASALTOS ENTRE JUGADORES ====================== */
+const MOTO_SPOT=new V3(112,0,-12),PARK=new V3(118,0,-24);
+let plane=null,planeEmit=0;
+function makePlane(){const g=new THREE.Group(),white=M('#f2f2f5'),red=M('#d62d4a'),dark=M('#222228');
+ const t=m=>{m.userData={kind:'air'};cityClick.push(m);return m};
+ const body=t(cyl(.9,.6,6.4,white,0,1.5,0,g,12));body.rotation.x=Math.PI/2;
+ const nose=t(cyl(.25,.9,1.3,red,0,1.5,3.8,g,12));nose.rotation.x=Math.PI/2;
+ t(box(11,.18,1.9,white,0,1.95,.5,g));t(box(11.2,.2,.5,red,0,1.96,1.2,g,false));
+ t(box(3.8,.14,1.1,white,0,1.7,-3.1,g));t(box(.14,1.8,1.3,red,0,2.6,-3.2,g));
+ t(box(1.2,.6,1.5,M('#9ecbff',{roughness:.1,metalness:.5,emissive:'#4a7fb5',emissiveIntensity:.3}),0,2.1,1,g));
+ [-.9,.9].forEach(x=>{const w=t(cyl(.34,.34,.26,dark,x,.35,.9,g,10));w.rotation.z=Math.PI/2;box(.1,1.1,.1,dark,x*.9,.9,.9,g,false)});
+ const w2=cyl(.26,.26,.2,dark,0,.3,-2.8,g,10);w2.rotation.z=Math.PI/2;
+ const prop=new THREE.Group();prop.position.set(0,1.5,4.5);g.add(prop);box(.14,2.8,.2,dark,0,0,0,prop,false);
+ g.userData.prop=prop;g.scale.setScalar(1.5);return g}
+function buildAirport(){
+ const g=new THREE.Group();scene.add(g);const tg=m=>{m.userData={kind:'air'};cityClick.push(m);return m};
+ tg(box(46,.12,96,M('#6b5a3a',{roughness:1}),122,.06,5,g,false));
+ tg(box(12,.2,80,M('#34343e',{roughness:.95}),125,.14,5,g,false));
+ for(let z=-30;z<=40;z+=6)box(.5,.05,3,new THREE.MeshBasicMaterial({color:'#e8e8e8'}),125,.27,z,g,false);
+ for(let z=-32;z<=42;z+=8)[119.2,130.8].forEach(x=>{const l=new THREE.Mesh(new THREE.SphereGeometry(.35,6,5),lampM);l.position.set(x,.5,z);g.add(l);addGlow(g,x,.7,z,'#ffd58a',4.5,'night')});
+ tg(box(12,6,10,M('#7d848f'),110,3,-24,g));tg(box(13,.6,11,M('#3a4150'),110,6.3,-24,g));box(.3,4.5,7,M('#2a2a33'),116.1,2.25,-24,g,false);
+ tg(box(4,4,4,M('#8a7a60'),112,2,8,g));tg(box(4.8,.5,4.8,M('#3a4150'),112,4.25,8,g));box(.1,1,2.4,neonBasic({color:'#ffd98a'}),114.1,3,8,g,false);
+ [[108,-14],[106.4,-14.6],[108.2,-15.8]].forEach(a=>cyl(.6,.6,1.2,M('#b45309'),a[0],.6,a[1],g,10));
+ cyl(.08,.08,4,M('#555'),131.5,2,30,g,6);const cone=new THREE.Mesh(new THREE.ConeGeometry(.5,2.4,8),M('#ff7a1a'));cone.rotation.z=-Math.PI/2;cone.position.set(132.9,4.2,30);g.add(cone);
+ plane=makePlane();plane.position.copy(PARK);g.add(plane);
+ const lab=makeLabel('✈ Aeropuerto clandestino\n👆 Vuelos de asalto',{w:512,h:140,font:34,scale:[16,4.4],bg:'rgba(255,150,40,.94)'});lab.position.set(118,12,-6);g.add(lab);bobs.push({s:lab,y0:12,di:'air',ph:3})}
+function updatePlane(rm,t,rdt){if(!plane)return;
+ let p=-1;if(rm&&!rm.pre){const T1=rm.d/rm.speed;if(rm.t>=T1&&rm.t<=T1+rm.wait)p=(rm.t-T1)/rm.wait}
+ const spin=plane.userData.prop;
+ if(p<0){plane.visible=true;plane.position.copy(PARK);plane.rotation.set(0,0,0);spin.rotation.z+=rdt*3;return}
+ const e2=x=>x*x,eo=x=>1-(1-x)*(1-x);let x=125,y=0,z=0,ry=0,pt=0,vis=true;
+ if(p<.08){const k=p/.08;x=PARK.x+(125-PARK.x)*k;z=PARK.z+(-26-PARK.z)*k}
+ else if(p<.28){const k=(p-.08)/.2;z=-26+44*e2(k);y=Math.max(0,z-8)*.3;pt=-Math.min(.35,y*.05)}
+ else if(p<.5){const k=(p-.28)/.22,e=e2(k);z=18+302*e;y=3+70*e;pt=-.3}
+ else if(p<.6)vis=false;
+ else if(p<.8){const k=(p-.6)/.2,e=eo(k);z=320-282*e;y=70*Math.pow(1-e,1.6);ry=Math.PI}
+ else{const k=Math.min(1,(p-.8)/.2),e=eo(k);z=38-50*e;ry=Math.PI}
+ plane.visible=vis;plane.position.set(x,y,z);plane.rotation.set(pt,ry,0);spin.rotation.z+=rdt*45;
+ if(vis){planeEmit+=rdt;if(planeEmit>.08){planeEmit=0;spawnFx(x-4.6*Math.sin(ry),y+2,z-4.6*Math.cos(ry),rnd(-.3,.3),rnd(.3,.8),rnd(-.3,.3),'#9ca3af',1.2,1.2,{grow:1.8,add:false,op:.4})}}}
+
+/* ---- datos de rivales (nunca se pide ni se muestra el nivel del Alejo rival hasta el momento de la tirada) ---- */
+let AIR={state:'idle',rows:[],msg:'',ev:true};
+const IV=[0,30,60,150,300];
+const normIng=x=>{if(!x)return{};try{const o=typeof x==='string'?JSON.parse(x):x;return o&&typeof o==='object'?o:{}}catch(e){return{}}};
+const ingValue=ing=>Object.entries(ing||{}).reduce((a,e)=>a+(ingOf(e[0])?IV[ingOf(e[0]).rar]*(+e[1]||0):0),0);
+const ingTotal=ing=>Object.values(ing||{}).reduce((a,q)=>a+(+q||0),0);
+const hasRare=ing=>Object.entries(ing||{}).some(e=>ingOf(e[0])&&ingOf(e[0]).rar>=3&&(+e[1]||0)>0);
+function fuzz(u){let h=0;const s=u+Math.floor(Date.now()/3.6e6);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return .8+((h>>>0)%1000)/1000*.45}
+function estLoot(r){const f=fuzz(r.u);return{lo:Math.round(r.money*.05*f/50)*50,hi:Math.round(r.money*.15*f/50)*50,ransom:Math.max(300,Math.round((r.money*.10+ingValue(r.ing)*.125)*f*.8/50)*50)}}
+function raidBlock(){
+ if(!supabase||!USER||USER.guest)return 'Necesitas una cuenta para asaltar a otros jugadores.';
+ if(!online())return 'Necesitas conexión a internet.';
+ if(roleChar('asaltante').id!=='alejo')return 'Alejo debe ser tu asaltante (no puede ser el Boss).';
+ if(G.kidnap)return 'Alejo está secuestrado.';
+ if(missionOf('asaltante'))return 'Alejo ya está en misión.';
+ return restMsg(['asaltante'])}
+async function loadAir(){
+ AIR={state:'loading',rows:[],msg:'',ev:true};if(SH.type==='air')renderSheet();
+ if(!supabase)AIR.state='nosb';else if(!online())AIR.state='offline';else if(!USER||USER.guest)AIR.state='guest';
+ else{try{
+  let rows;
+  try{const r=await withTimeout(supabase.from('latinto_profiles').select('username,rep:save_data->>rep,money:save_data->>money,ing:save_data->inv->ing').neq('username',USER.username).limit(200),10000);if(r.error)throw r.error;
+   rows=(r.data||[]).map(x=>({u:x.username,rep:parseFloat(x.rep)||0,money:Math.max(0,parseFloat(x.money)||0),ing:normIng(x.ing)}))}
+  catch(e1){console.warn('[La Tinto] lectura directa no disponible, se lee save_data',e1);const r=await withTimeout(supabase.from('latinto_profiles').select('username,save_data').neq('username',USER.username).limit(200),12000);if(r.error)throw r.error;
+   rows=(r.data||[]).map(x=>{const sd=normSave(x.save_data);return{u:x.username,rep:sd?(+sd.rep||0):0,money:sd?Math.max(0,+sd.money||0):0,ing:sd&&sd.inv?normIng(sd.inv.ing):{}}})}
+  rows.sort((a,b)=>b.rep-a.rep||String(a.u).localeCompare(String(b.u)));
+  AIR={state:'ok',rows:rows.slice(0,40),msg:'',ev:true};
+  try{const pr=await withTimeout(supabase.from('latinto_events').select('id').limit(1),6000);if(pr.error){AIR.ev=false;AIR.msg=pr.error.message}}catch(e2){AIR.ev=false;AIR.msg=String(e2&&e2.message||e2)}
+ }catch(e){console.warn('[La Tinto] objetivos',e);AIR={state:'err',rows:[],msg:String(e&&e.message||e),ev:true}}}
+ if(SH.type==='air')renderSheet()}
+function shAir(){
+ const k=G.kidnap,al=charById('alejo'),S=AIR.state,blk=raidBlock();
+ let h=`<div class="sub mb-2">Un vuelo clandestino infiltra a ${al.n} en la base de otro jugador. Su Alejo defiende automáticamente: el resultado es incierto y nunca se revela el nivel del rival.</div>`;
+ if(k&&k.pvp)h+=`<div class="card" style="border-color:var(--bad)"><b>⛓ ${al.n} retenido en la base de ${esc(k.target)}</b><div class="sub mt-1">Se libera solo en <b data-bt="kt:0"></b> (tiempo real).</div>${B(`Pagar rescate ya · ${fmt(k.ransom)} (se transfiere al defensor)`,'ransom',{c:'btn-r w-full mt-2',dis:G.money<k.ransom})}</div>`;
+ else if(k)h+=`<div class="card sub bad">⛓ ${al.n} está secuestrado por una banda rival.</div>`;
+ else if(blk)h+=`<div class="card sub warn">${esc(blk)}</div>`;
+ h+=B('🔄 Actualizar objetivos','airrefresh',{c:'btn-g w-full mb-2'});
+ if(S==='loading')return h+'<div class="sub" style="text-align:center;padding:12px">Buscando objetivos…</div><div class="spin" style="margin:0 auto 14px"></div>';
+ if(S==='nosb')return h+'<div class="card sub">No hay conexión con el servidor de la nube.</div>';
+ if(S==='offline')return h+'<div class="card sub">Necesitas conexión a internet para ver objetivos.</div>';
+ if(S==='guest')return h+'<div class="card sub">Inicia sesión con una cuenta para asaltar a otros jugadores.</div>';
+ if(S==='err')return h+`<div class="card"><div class="sub bad">No se pudieron cargar los objetivos: ${esc(AIR.msg)}</div></div>`;
+ if(S!=='ok')return h;
+ if(!AIR.ev)h+=`<div class="card" style="border-color:var(--warn)"><div class="sub warn">Falta la tabla <b>latinto_events</b> en Supabase (columnas: id, target, attacker, kind, money, items, applied, created_at), necesaria para registrar los robos.${AIR.msg?' ('+esc(AIR.msg)+')':''}</div></div>`;
+ if(!AIR.rows.length)h+='<div class="card sub">Todavía no hay otros jugadores registrados.</div>';
+ AIR.rows.forEach(r=>{const e=estLoot(r),tot=ingTotal(r.ing),st=tot>=40?'abundantes':tot>=15?'moderados':'escasos';
+  h+=`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">${esc(r.u)}</b><span class="hd warn" style="font-size:17px">⭐ ${Math.round(r.rep)}</span></div>
+  <div class="sub mt-1">💰 Botín estimado: <b>≈ ${fmt(e.lo)} – ${fmt(e.hi)}</b></div><div class="sub">📦 Suministros ${st}${hasRare(r.ing)?' · ✨ ingredientes raros':''}</div>
+  <div class="sub">⛓ Si falla: Alejo retenido 2 h · rescate ≈ ${fmt(e.ransom)}</div>
+  ${B('🥷 Lanzar asalto con Alejo','raid',{c:'btn-r w-full mt-2',d:{u:r.u},dis:!!blk||!AIR.ev})}</div>`});
+ const notes=G.notes||[];if(notes.length)h+=`<div class="hd mt-3 mb-2">Avisos recientes</div>`+notes.map(n=>`<div class="card sub" style="padding:8px">${esc(n.txt)}</div>`).join('');
+ return h}
+function startRaid(u){const b=raidBlock();if(b)return toast(b,'bad');if(!AIR.ev)return toast('Falta la tabla latinto_events en Supabase','bad');
+ startMission({type:'raid',role:'asaltante',chars:[roleChar('asaltante').id],dest:MOTO_SPOT.clone(),speed:9,wait:40,data:{target:u},txt:'Vuelo de asalto'});
+ toast(`✈ ${charById('alejo').n} parte al aeródromo para infiltrarse en la base de ${esc(u)}`);sfx('click')}
+async function insertEvent(ev){try{const r=await withTimeout(supabase.from('latinto_events').insert({target:ev.target,attacker:ev.attacker,kind:ev.kind,money:ev.money||0,items:ev.items||{},applied:false}),9000);return r.error?{ok:false,err:r.error}:{ok:true}}catch(e){return{ok:false,err:e}}}
+/* Resolución del asalto: Alejo atacante vs Alejo defensor. Probabilidad 50 % ±8 % por nivel de diferencia (15–85 %). */
+async function resolveRaid(m){
+ const t=m.data.target,al=charById('alejo').n;
+ try{
+  const rr=await withTimeout(supabase.from('latinto_profiles').select('username,money:save_data->>money,ing:save_data->inv->ing,alv:save_data->level->>alejo').eq('username',t).maybeSingle(),10000);
+  if(rr.error)throw rr.error;if(!rr.data)throw new Error('el objetivo ya no existe');
+  let dm=Math.max(0,parseFloat(rr.data.money)||0);const ing=Object.assign({},normIng(rr.data.ing)),dl=Math.max(1,parseInt(rr.data.alv)||1);
+  try{const pe=await withTimeout(supabase.from('latinto_events').select('money').eq('target',t).eq('applied',false).eq('kind','robbery'),6000);if(!pe.error&&Array.isArray(pe.data))dm=Math.max(0,dm-pe.data.reduce((a,x)=>a+(+x.money||0),0))}catch(e){}
+  const p=clamp(.5+.08*((G.level.alejo||1)-dl),.15,.85);
+  if(Math.random()<p){
+   const money=Math.round(dm*rnd(.05,.15)),names=Object.keys(ing).filter(k=>ingOf(k)&&(+ing[k]||0)>0);
+   for(let i=names.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[names[i],names[j]]=[names[j],names[i]]}
+   const pick=names.slice(0,Math.min(names.length,1+Math.floor(Math.random()*3))),rp=rnd(.10,.15),items={};
+   pick.forEach(k=>{items[k]=Math.min(Math.floor(+ing[k]),Math.max(1,Math.round(ing[k]*rp)))});
+   const ins=await insertEvent({target:t,attacker:USER.username,kind:'robbery',money,items});if(!ins.ok)throw ins.err;
+   G.money+=money;G.stats.earned+=money;Object.keys(items).forEach(k=>{G.inv.ing[k]=(G.inv.ing[k]||0)+items[k]});
+   const got=Object.keys(items).map(k=>`${items[k]}× ${ingOf(k).n}`);
+   toast(`🥷 ¡Asalto con éxito a ${esc(t)}! Botín: ${fmt(money)}${got.length?' y '+got.join(', '):''}.`,'ok');sfx('coin');floatText('+'+fmt(money),'#4ade80');G.heat=Math.min(100,G.heat+4);m.data.result='ok'
+  }else{
+   const ptl=dm*.10+ingValue(ing)*.125,ransom=Math.max(300,Math.round(ptl*.8/10)*10);
+   G.kidnap={id:'alejo',pvp:true,until:Date.now()+2*3600*1000,target:t,ransom,di:0};
+   insertEvent({target:t,attacker:USER.username,kind:'defended',money:0,items:{}});
+   G.missions=G.missions.filter(x=>x!==m);m.data.result='fail';
+   toast(`⛓ ¡El asalto a ${esc(t)} fracasó! ${al} queda retenido 2 horas. Rescate inmediato: ${fmt(ransom)}.`,'bad');floatText('CAPTURADO','#fb7185')}
+ }catch(e){console.warn('[La Tinto] asalto cancelado',e);m.data.result='error';toast('El asalto se canceló: no se pudo contactar con la base de datos. Alejo vuelve sin botín.','bad')}
+ saveGame(false)}
+/* Eventos recibidos (robos, rescates, defensas): se aplican al conectarse y cada ~30 s */
+function note(txt){G.notes=G.notes||[];G.notes.unshift({t:Date.now(),txt});G.notes.length=Math.min(G.notes.length,10)}
+function applyEvent(ev){
+ if(ev.kind==='robbery'){const lose=Math.min(Math.max(0,G.money)*.2,Math.max(0,+ev.money||0));G.money=Math.max(0,G.money-lose);const it=normIng(ev.items),got=[];
+  Object.keys(it).forEach(k=>{const have=G.inv.ing[k]||0,take=Math.min(have,Math.max(0,Math.floor(+it[k]||0)),Math.ceil(have*.25));if(take>0){G.inv.ing[k]=have-take;got.push(`${take}× ${ingOf(k)?ingOf(k).n:k}`)}});
+  const txt=`🥷 ${ev.attacker} asaltó tu Tinto: perdiste ${fmt(lose)}${got.length?' y '+got.join(', '):''}.`;note(txt);toast(txt,'bad')}
+ else if(ev.kind==='ransom'){const m=Math.min(100000,Math.max(0,+ev.money||0));G.money+=m;G.stats.earned+=m;const txt=`💰 ${ev.attacker} pagó ${fmt(m)} de rescate por su asaltante capturado.`;note(txt);toast(txt,'ok');sfx('coin')}
+ else if(ev.kind==='defended'){const txt=`🛡 Tu Alejo frustró un asalto de ${ev.attacker} y lo capturó.`;note(txt);toast(txt,'ok')}
+ markDirty()}
+let polling=false;
+async function pollEvents(){
+ if(polling||!supabase||!USER||USER.guest||!G||!online())return;polling=true;let n=0;
+ try{const r=await withTimeout(supabase.from('latinto_events').select('*').eq('target',USER.username).eq('applied',false).order('id',{ascending:true}).limit(50),8000);if(r.error)throw r.error;
+  for(const ev of (r.data||[])){const c=await withTimeout(supabase.from('latinto_events').update({applied:true}).eq('id',ev.id).eq('applied',false).select('id'),8000);if(c.error||!c.data||!c.data.length)continue;applyEvent(ev);n++}
+ }catch(e){console.warn('[La Tinto] eventos',e)}
+ polling=false;if(n)saveGame(false)}
+function kidCheck(){const k=G.kidnap;if(k&&k.pvp&&Date.now()>=k.until){G.kidnap=null;ich[k.id].vis=false;toast('⛓ Alejo ha escapado tras 2 horas de cautiverio y vuelve a La Tinto.','ok');markDirty();saveGame(false)}}
 function shSettings(){const guest=USER&&USER.guest,cl={ok:'☁ Sincronizado',busy:'☁ Sincronizando…',err:'⚠ Error de nube: se guarda en local',off:guest?'💾 Solo en este dispositivo':'📴 Sin conexión: se guarda en local'}[cloudState]||'';
  return['Ajustes',`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">👤 ${esc(USER?USER.username:'—')}</b><span class="chip ${cloudState==='ok'?'ok':cloudState==='err'?'bad':'warn'}">${cl}</span></div><div class="sub mt-1">Autoguardado cada 10 s en el dispositivo${guest?'.':' y en la nube.'}</div></div>
  <div class="grid2">${B('❓ Tutorial','tut')}${B('💾 Guardar ahora','save')}${B(UI.mute?'🔇 Sonido apagado':'🔊 Sonido activo','mute')}${B('🚪 Cerrar sesión','logout')}</div>${B('🏆 Clasificación online','rank',{c:'btn-o w-full mt-2'})}${B('🗑 Nueva partida','newgame',{c:'btn-r w-full mt-2'})}
  <div class="sub mt-3">Estadísticas: ${G.stats.delivered} uds repartidas · ${fmt(G.stats.earned)} ganados.</div>`]}
 function renderSheet(){if(!G||!SH.type)return;let r;
- switch(SH.type){case'plot':r=shPlot(SH.arg);break;case'lab':r=['Laboratorio de '+nm('tecnico'),shLab()];break;case'wh':r=['📦 Almacén',shWh()];break;case'zone':r=shZone(SH.arg);break;case'dist':r=shDist(SH.arg);break;case'team':r=shTeam();break;case'rank':r=['🏆 Clasificación online',shRank()];break;case'char':r=shChar(SH.arg);break;default:r=shSettings()}
+ switch(SH.type){case'plot':r=shPlot(SH.arg);break;case'lab':r=['Laboratorio de '+nm('tecnico'),shLab()];break;case'wh':r=['📦 Almacén',shWh()];break;case'zone':r=shZone(SH.arg);break;case'dist':r=shDist(SH.arg);break;case'team':r=shTeam();break;case'rank':r=['🏆 Clasificación online',shRank()];break;case'air':r=['✈ Vuelos de asalto',shAir()];break;case'char':r=shChar(SH.arg);break;default:r=shSettings()}
  const body=$('#sh-body'),sc=body.scrollTop;$('#sh-title').textContent=r[0];body.innerHTML=r[1];body.scrollTop=sc;renderStrip();updateBinds()}
-function renderStrip(){if(!G)return;const ic={expedition:'🚗',delivery:'🚚',scout:'👁',assault:'🏍'};
- $('#mstrip').innerHTML=G.missions.map(m=>`<div class="ms"><div class="row sp"><span>${ic[m.type]} ${m.txt}</span><span data-bt="mp:${m.role}" style="color:var(--mut)"></span></div>${bar('ms:'+m.role,m.type==='assault'?'#fb7185':'#2dd4bf')}</div>`).join('')+(G.kidnap?`<div class="ms" style="border-color:var(--bad)">⛓ ${charById(G.kidnap.id).n} secuestrado</div>`:'')}
+function renderStrip(){if(!G)return;const ic={expedition:'🚗',delivery:'🚚',scout:'👁',assault:'🏍',raid:'✈'};
+ $('#mstrip').innerHTML=G.missions.map(m=>`<div class="ms"><div class="row sp"><span>${ic[m.type]} ${m.txt}</span><span data-bt="mp:${m.role}" style="color:var(--mut)"></span></div>${bar('ms:'+m.role,m.type==='assault'?'#fb7185':'#2dd4bf')}</div>`).join('')+(G.kidnap?`<div class="ms" style="border-color:var(--bad)">⛓ ${charById(G.kidnap.id).n} secuestrado${G.kidnap.pvp?' · <span data-bt="kt:0"></span>':''}</div>`:'')}
 function pctOf(k){const[a,b]=k.split(':');switch(a){case'pg':{const p=G.plots[+b];return p.state==='ready'?100:p.growth*100}case'pw':return G.plots[+b].water;case'ms':{const m=missionOf(b);return m&&!m.pre?clamp(m.t/(2*m.d/m.speed+m.wait),0,1)*100:0}case'q':return(G.tabs[+b]?G.tabs[+b].p:0)*100;case'tr':return G.d[+b].trust}return 0}
-function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}return''}
+function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}if(a==='kt'){const k=G.kidnap;if(!k||!k.pvp)return'';const ms=k.until-Date.now();if(ms<=0)return'ya';return Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s'}return''}
 function updateBinds(){$$('[data-bp]').forEach(e=>e.style.width=pctOf(e.dataset.bp)+'%');$$('[data-bt]').forEach(e=>e.textContent=txtOf(e.dataset.bt))}
 function phaseOfDay(h){return h>=5&&h<8?['🌅','Amanecer']:h>=8&&h<18?['☀️','Día']:h>=18&&h<21?['🌇','Atardecer']:['🌙','Noche']}
 function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=hourNow(),ph=phaseOfDay(h),dn=dayness(h);
@@ -871,7 +1017,7 @@ function pick(e){const r=renderer.domElement.getBoundingClientRect();mouse.set((
 renderer.domElement.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,t:performance.now()}});
 renderer.domElement.addEventListener('pointerup',e=>{if(!pd||!G||!started||busyCam||tw)return;const d=Math.hypot(e.clientX-pd.x,e.clientY-pd.y),t=performance.now()-pd.t;pd=null;if(d>10||t>650)return;
  const h=pick(e);if(!h){return}const u=h.object.userData;sfx('click');
- if(mode==='city'){if(u.kind==='tinto')enterTinto();else if(u.kind==='wh')openSheet('wh');else if(u.kind==='zone')openSheet('zone',u.i);else if(u.kind==='district')selectDistrict(u.di)}
+ if(mode==='city'){if(u.kind==='tinto')enterTinto();else if(u.kind==='wh')openSheet('wh');else if(u.kind==='air'){openSheet('air');loadAir()}else if(u.kind==='zone')openSheet('zone',u.i);else if(u.kind==='district')selectDistrict(u.di)}
  else{if(u.kind==='plot')openSheet('plot',u.i);else if(u.kind==='lab')openSheet('lab');else if(u.kind==='char')openSheet('char',u.id)}});
 function selectDistrict(i){UI.selD=i;const D=DIST[i];selFrame.visible=true;selFrame.position.set(D.gx*38,0,D.gz*38);openSheet('dist',i)}
 /* Evita que la hoja se redibuje mientras el dedo está pulsando (botones que no respondían) */
@@ -965,8 +1111,8 @@ async function syncCloud(){
  return res}
 async function saveGame(manual){if(!G||!USER)return;saveLocal();const r=await syncCloud();
  if(manual)toast(r==='ok'?'☁ Partida guardada en la nube':r==='local'?'💾 Guardada en este dispositivo':'💾 Guardada en este dispositivo (la nube no responde)',r==='ok'?'ok':'warn')}
-setInterval(()=>{if(G&&started&&USER)saveGame(false)},10000);
-addEventListener('online',()=>{if(G&&started&&USER)saveGame(false);else setCloud('off')});
+let pollN=0;setInterval(()=>{if(G&&started&&USER){saveGame(false);if(++pollN%3===0)pollEvents()}},10000);
+addEventListener('online',()=>{if(G&&started&&USER){saveGame(false);pollEvents()}else setCloud('off')});
 addEventListener('offline',()=>setCloud('off'));
 addEventListener('beforeunload',()=>{if(G&&started)saveLocal()});
 
@@ -1025,7 +1171,7 @@ async function enterGame(user,prefetched){
   catch(e){console.warn('[La Tinto] sin acceso a la nube, se usa la copia local',e);setCloud('err')}}
  else setCloud('off');
  const best=[local,remote].filter(Boolean).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0))[0];
- if(best){G=best;saveLocal();startGame(null,best);setTimeout(()=>saveGame(false),2500)}
+ if(best){G=best;saveLocal();startGame(null,best);setTimeout(()=>saveGame(false),2500);setTimeout(pollEvents,3500)}
  else showSelect(boss=>{newGame(boss);saveLocal();startGame(null,G);saveGame(false)},'Empezar como Boss',user.guest?null:()=>{try{localStorage.removeItem(USER_KEY)}catch(e){}USER=null;showAuth()})}
 function startFlow(){const u=getLocalUser();if(u)enterGame(u);else showAuth()}
 function showSelect(onPick,label,onBack){let chosen=null;
@@ -1089,7 +1235,7 @@ function updateCity(rdt,t){
  carA.visible=carB.visible=moto.visible=false;CHARS.forEach(c=>{const o=cityChars[c.id];o.visible=false;if(o.parent===moto)scene.add(o)});
  smokeT+=rdt;const emit=smokeT>.07;if(emit)smokeT=0;
  G.missions.forEach(m=>{if(m.pre)return;const p=missionPos(m),ph=phaseOf(m);let o,veh=true;
-  if(m.type==='expedition')o=carA;else if(m.type==='delivery')o=carB;else if(m.type==='assault'){o=moto;const r=cityChars[m.chars[0]];if(r.parent!==moto)moto.add(r);r.position.set(-.2,.1,0);r.rotation.set(0,Math.PI/2,0);r.scale.setScalar(1.1);r.visible=true;setLabel(r.userData.label,`${charById(m.chars[0]).n}\n${['A toda velocidad','Asaltando…','Huyendo'][ph]}`)}
+  if(m.type==='expedition')o=carA;else if(m.type==='delivery')o=carB;else if(m.type==='assault'||m.type==='raid'){o=moto;const r=cityChars[m.chars[0]];if(r.parent!==moto)moto.add(r);r.position.set(-.2,.1,0);r.rotation.set(0,Math.PI/2,0);r.scale.setScalar(1.1);r.visible=!(m.type==='raid'&&ph===1);setLabel(r.userData.label,`${charById(m.chars[0]).n}\n${m.type==='raid'?['En moto al aeródromo','✈ En vuelo…','De vuelta'][ph]:['A toda velocidad','Asaltando…','Huyendo'][ph]}`)}
   else{o=cityChars[m.chars[0]];veh=false}
   o.visible=true;const pv=o.userData.lp;let moving=ph!==1;
   if(pv){const dx=p.x-pv.x,dz=p.z-pv.z;if(Math.hypot(dx,dz)>.002)o.userData.ang=veh?Math.atan2(-dz,dx):Math.atan2(dx,dz)}
@@ -1097,6 +1243,7 @@ function updateCity(rdt,t){
   const names=m.chars.map(id=>charById(id).n).join(' + '),st=['En camino','Actuando…','Volviendo'][ph];
   if(o.userData.label&&m.type!=='assault')setLabel(o.userData.label,`${names}\n${st}`);
   if(veh&&moving&&emit){const ex=o.userData.exhaust,a=o.userData.ang||0,c=Math.cos(a),s=Math.sin(a);spawnFx(p.x+ex[0]*c+ex[2]*s,ex[1],p.z-ex[0]*s+ex[2]*c,rnd(-.3,.3),rnd(.5,1),rnd(-.3,.3),m.type==='assault'?'#9ca3af':'#6b7280',m.type==='assault'?.8:1.1,1.2,{grow:1.8,add:false,op:.45})}});
+ updatePlane(G.missions.find(x=>x.type==='raid'&&!x.pre),t,rdt);
  if(tintoMat)tintoMat.emissiveIntensity=.06+NF*(.9+Math.sin(t*2)*.15);if(beam){beam.visible=NF>.06;beam.material.opacity=NF*(.4+Math.sin(t*1.6)*.06)}bobs.forEach(b=>{b.s.position.y=b.y0+Math.sin(t*3+b.ph)*.45});
  if(selFrame.visible)selFrame.children.forEach(m=>m.scale.y=1+Math.sin(t*4)*.2);
  ZN.forEach((Z,zi)=>{const c=zoneG[zi].userData.crystal;if(c){c.rotation.y=t*.8;c.position.y=3+Z.tier*.4+Math.sin(t*1.5+zi)*.3}})}
@@ -1104,7 +1251,7 @@ let uiT=0,lightT=0;
 function frame(now){requestAnimationFrame(frame);try{frameBody(now)}catch(e){if(!frame.err){frame.err=1;console.error('[La Tinto] error en un fotograma',e)}}}
 let last=performance.now();
 function frameBody(now){const rdt=Math.min(.1,(now-last)/1000);last=now;const t=now/1000;
- if(G&&started){const paused=tut.active||UI.speed===0,sp=paused?0:UI.speed,sdt=rdt*Math.min(sp,4);
+ if(G&&started){kidCheck();const paused=tut.active||UI.speed===0,sp=paused?0:UI.speed,sdt=rdt*Math.min(sp,4);
   if(sp>0)simulate(rdt*sp);
   updateInterior(sdt,rdt,t);updateCity(rdt,t);
   lightT+=rdt;if(lightT>.25){lightT=0;updateLighting();updateFrames()}
