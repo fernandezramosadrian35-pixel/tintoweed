@@ -115,7 +115,6 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
 .inp:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(45,212,191,.25)}
 .spin{width:44px;height:44px;border-radius:50%;border:5px solid rgba(255,255,255,.15);border-top-color:var(--acc);margin-top:18px;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.pill .hs small{font-size:10px;color:#cdbfe3;line-height:1.1}
 </style>
 </head>
 <body>
@@ -124,7 +123,7 @@ body.intut #toasts{top:290px}body.intut #mstrip{display:none}
 <header id="hud">
   <div class="pill money" id="hMoneyP"><span class="ic">💰</span><b id="hMoney">0 €</b></div>
   <div class="pill" id="hClock"><span class="ic big" id="hSun">☀️</span><div class="hs"><small id="hDay">Día 1</small><b id="hTime">08:00</b><em id="hRisk"></em></div></div>
-  <div class="pill"><span class="ic">⭐</span><div class="hs"><b id="hRep">0</b><small id="hLvl">Nv 1</small></div></div>
+  <div class="pill"><span class="ic">⭐</span><b id="hRep">0</b></div>
   <div class="pill heat"><span class="ic">🔥</span><div class="bar"><i id="hHeat" style="background:linear-gradient(90deg,#fbbf24,#ef4444)"></i></div></div>
 </header>
 <div id="sidebtns"><button class="rbtn" id="hSpeed" data-act="speed" aria-label="Pausar o reanudar">▶</button><button class="rbtn" data-act="rank" aria-label="Clasificación online">🏆</button><button class="rbtn" data-act="settings" aria-label="Ajustes">⚙<i id="cdot"></i></button></div>
@@ -821,13 +820,12 @@ function shRank(){
 /* ====================== AEROPUERTO CLANDESTINO Y ASALTOS ENTRE JUGADORES ====================== */
 const MOTO_SPOT=new V3(112,0,-12),PARK=new V3(118,0,-24);
 let plane=null,planeEmit=0,airLabel=null;
-const AIR_REQ=10,AIR_LOCK_MSG='🔒 Requiere Nivel 10 para desbloquear el Aeropuerto Clandestino';
-const empireLevel=()=>Math.min(10,1+Math.floor((G?G.rep:0)/10));
-const airUnlocked=()=>empireLevel()>=AIR_REQ;
-function tapAir(){if(!airUnlocked()){closeSheet();toast(AIR_LOCK_MSG+`<br><small>Tu nivel de imperio: ${empireLevel()} (reputación ${Math.round(G.rep)} de ${(AIR_REQ-1)*10})</small>`,'warn');return}openSheet('air');loadAir()}
+const AIR_REP=10,AIR_LOCK_MSG='🔒 Requiere Reputación 10 para desbloquear el Aeropuerto Clandestino';
+const airUnlocked=()=>!!G&&Math.round(G.rep)>=AIR_REP;
+function tapAir(){if(!airUnlocked()){closeSheet();toast(AIR_LOCK_MSG+`<br><small>Tu reputación: ${Math.round(G.rep)} de ${AIR_REP}</small>`,'warn');return}openSheet('air');loadAir()}
 const raidProb=(al,dl)=>clamp(.5+.08*(al-dl),.15,.85);
 function pRange(lv){const p=Math.round(raidProb(G.level.alejo||1,lv)*100);return Math.max(0,p-10)+'% - '+Math.min(100,p+10)+'%'}
-function updateAirLabel(){if(!airLabel)return;const u=airUnlocked();setLabel(airLabel,u?'✈ Aeropuerto Clandestino\nUsa a Alejo para atacar\nlas bases de otros jugadores':'🔒 Aeropuerto Clandestino\nRequiere Nivel 10\nAtaca bases de otros jugadores con Alejo','#fff',u?'rgba(255,150,40,.94)':'rgba(88,62,130,.94)')}
+function updateAirLabel(){if(!airLabel)return;const u=airUnlocked();setLabel(airLabel,u?'✈ Aeropuerto Clandestino\nUsa a Alejo para atacar\nlas bases de otros jugadores':'🔒 Aeropuerto Clandestino\nRequiere Reputación 10\nAtaca bases de otros jugadores con Alejo','#fff',u?'rgba(255,150,40,.94)':'rgba(88,62,130,.94)')}
 function makePlane(){const g=new THREE.Group(),white=M('#f2f2f5'),red=M('#d62d4a'),dark=M('#222228');
  const t=m=>{m.userData={kind:'air'};cityClick.push(m);return m};
  const body=t(cyl(.9,.6,6.4,white,0,1.5,0,g,12));body.rotation.x=Math.PI/2;
@@ -981,7 +979,7 @@ function phaseOfDay(h){return h>=5&&h<8?['🌅','Amanecer']:h>=8&&h<18?['☀️'
 function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=hourNow(),ph=phaseOfDay(h),dn=dayness(h);
  $('#hSun').textContent=ph[0];$('#hDay').textContent=`Día ${G.day} · ${ph[1]}`;$('#hTime').textContent=String(Math.floor(h)).padStart(2,'0')+':'+String(Math.floor(h%1*60)).padStart(2,'0');
  $('#hRisk').textContent=dn>.5?'👮 Policía alta':'🗡 Bandas altas';$('#hClock').classList.toggle('night',dn<.5);
- $('#hRep').textContent=Math.round(G.rep);$('#hLvl').textContent='Nv '+empireLevel();$('#hHeat').style.width=G.heat+'%';$('#hSpeed').innerHTML=UI.speed===0?'⏸<small style="display:block;font-size:10px;line-height:1">x0</small>':'▶<small style="display:block;font-size:10px;line-height:1">x1</small>'}
+ $('#hRep').textContent=Math.round(G.rep);$('#hHeat').style.width=G.heat+'%';$('#hSpeed').innerHTML=UI.speed===0?'⏸<small style="display:block;font-size:10px;line-height:1">x0</small>':'▶<small style="display:block;font-size:10px;line-height:1">x1</small>'}
 function updateChrome(){$('#fabL').textContent=mode==='city'?'🏠 Entrar a La Tinto':'🏙 Ciudad';$('#fabR').style.display=mode==='interior'?'':'none';
  $('#hint').textContent=mode==='city'?'1 dedo: mover · 2 dedos: zoom y rotar · Toca La Tinto, el Almacén, un barrio o una zona':'1 dedo: mover · pellizca: zoom · Toca parcelas, mesas de laboratorio o personajes';
  $('#hint').style.opacity=SH.type||tut.active?0:1;$('#fabs').style.display=SH.type&&innerWidth<760?'none':'flex'}
