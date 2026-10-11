@@ -248,7 +248,8 @@ const DIST=[
  {n:'León',gx:1,gz:-1,price:1.5,gang:1.1,loot:1.3,req:50,cost:1600,trust:10,col:'#2c3f4f',rival:'Los Tiburones'},
  {n:'El Órbigo',gx:-1,gz:-1,price:1.55,gang:1.15,loot:1.35,req:50,cost:1700,trust:8,col:'#2f4a45',rival:'Hijos del Río'},
  {n:'Laguna de Negrillos',gx:1,gz:1,price:1.6,gang:1.2,loot:1.4,req:52,cost:1800,trust:9,col:'#45402c',rival:'Clan Olmedo'},
- {n:'Río Piedras',gx:-1,gz:1,price:1.7,gang:1.3,loot:1.5,req:55,cost:2000,trust:6,col:'#43304a',rival:'Los Altos'}];
+ {n:'Río Piedras',gx:-1,gz:1,price:1.7,gang:1.3,loot:1.5,req:55,cost:2000,trust:6,col:'#43304a',rival:'Los Altos'},
+ {n:'Puerto Clandestino',gx:-4,gz:0,price:1,gang:0,loot:0,req:0,cost:0,trust:100,col:'#1f3a4a',rival:'—',port:true}];
 
 /* ====================== ESTADO ====================== */
 let G=null,UI={strain:'verdina',ls:'verdina',ln:1,lt:'make',selD:null,speed:1,mute:false,dirty:true,deliv:null,press:false};
@@ -384,13 +385,13 @@ function buildCity(){
  // estrellas
  const pos=new Float32Array(900);for(let i=0;i<300;i++){const a=Math.random()*Math.PI*2,e=Math.random()*1.3+.12,r=700;pos[i*3]=Math.cos(a)*Math.cos(e)*r;pos[i*3+1]=Math.sin(e)*r;pos[i*3+2]=Math.sin(a)*Math.cos(e)*r}
  const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(pos,3));stars=new THREE.Points(sg,new THREE.PointsMaterial({color:'#ffffff',size:2.2,sizeAttenuation:false,transparent:true,opacity:0,depthWrite:false,fog:false}));scene.add(stars);
- buildZones();buildForest();buildAirport()}
+ buildZones();buildForest();buildAirport();buildPort()}
 function distSeg(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,l2=dx*dx+dz*dz||1;let t=((px-ax)*dx+(pz-az)*dz)/l2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),pz-(az+t*dz))}
 /* Bosque denso alrededor de la ciudad: pinos, árboles de hoja y rocas con InstancedMesh (barato de dibujar) */
 function buildForest(){
  const rand=mulberry(424242),dummy=new THREE.Object3D(),col=new THREE.Color();
- const segs=ZN.map(Z=>{const nn=nearestNode(new V3(Z.x,0,Z.z));return[nn.x,nn.z,Z.x,Z.z]});{const nn=nearestNode(MOTO_SPOT);segs.push([nn.x,nn.z,MOTO_SPOT.x,MOTO_SPOT.z])}
- const clear=(x,z)=>{if(Math.abs(x)<69&&Math.abs(z)<69)return false;if(x>98&&x<152&&z>-50&&z<54)return false;for(const n of segs){if(Math.hypot(x-n[2],z-n[3])<14)return false;if(distSeg(x,z,n[0],n[1],n[2],n[3])<4.5)return false}return true};
+ const segs=ZN.map(Z=>{const nn=nearestNode(new V3(Z.x,0,Z.z));return[nn.x,nn.z,Z.x,Z.z]});{const nn=nearestNode(MOTO_SPOT);segs.push([nn.x,nn.z,MOTO_SPOT.x,MOTO_SPOT.z])}{const nn2=nearestNode(PORT_SPOT);segs.push([nn2.x,nn2.z,PORT_SPOT.x,PORT_SPOT.z])}
+ const clear=(x,z)=>{if(Math.abs(x)<69&&Math.abs(z)<69)return false;if(x<-150)return false;if(x<-104&&z>-52&&z<52)return false;if(x>98&&x<152&&z>-50&&z<54)return false;for(const n of segs){if(Math.hypot(x-n[2],z-n[3])<14)return false;if(distSeg(x,z,n[0],n[1],n[2],n[3])<4.5)return false}return true};
  const NP=1200,ND=600,NR=360;
  const trunkG=new THREE.CylinderGeometry(.3,.45,2.6,6),c1=new THREE.ConeGeometry(2.4,5,7),c2=new THREE.ConeGeometry(1.7,4,7),crownG=new THREE.IcosahedronGeometry(2.4,0),rockG=new THREE.DodecahedronGeometry(1,0);
  const mTrunk=new THREE.MeshStandardMaterial({color:'#5a3d28',roughness:1}),mLeaf=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.9}),mRock=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true});
@@ -479,7 +480,7 @@ let carA,carB,moto;const cityChars={};
 function buildCityActors(){carA=makeCar('#a3e635');carB=makeCar('#f43f5e');moto=makeMoto();
  CHARS.forEach(c=>{const h=buildHuman(c,1.7,{scale:[5.6,1.7]});h.visible=false;scene.add(h);cityChars[c.id]=h})}
 const HOME=new V3(0,0,11.5);
-const dpos=i=>i===0?HOME.clone():new V3(DIST[i].gx*38,0,DIST[i].gz*38+11.5);
+const dpos=i=>DIST[i].port?PORT_SPOT.clone():i===0?HOME.clone():new V3(DIST[i].gx*38,0,DIST[i].gz*38+11.5);
 const zpos=zi=>new V3(ZN[zi].x,0,ZN[zi].z);
 function nearestNode(v){const f=a=>NODES.reduce((p,q)=>Math.abs(q-a)<Math.abs(p-a)?q:p);return new V3(f(v.x),0,f(v.z))}
 function routeTo(a,b){const na=nearestNode(a),nb=nearestNode(b),p=[a.clone(),na];if(na.x!==nb.x&&na.z!==nb.z)p.push(new V3(nb.x,0,na.z));p.push(nb,b.clone());return p}
@@ -620,7 +621,7 @@ const MIS={
   const txt=Object.entries(got).map(([k,v])=>`${v}× ${ingOf(k).n}`).join(', ');const rare=Object.keys(got).some(k=>ingOf(k).rar>=3);
   toast(`${nm('buscador')} registra ${Z.n}: ${txt}.${rare?' ✨ ¡Hallazgo raro!':''}`,rare?'ok':'');},
   done(m){const got=m.data.got||{};for(const[k,v]of Object.entries(got))G.inv.ing[k]=(G.inv.ing[k]||0)+v;toast(`📦 Suministros entregados en el Almacén`,'ok');sfx('coin')}},
- delivery:{arrive(m){const d=m.data,D=DIST[d.di],S=G.d[d.di],r=riskInfo(d.di),pos=dpos(d.di),val=unitPrice(d.key,d.q,d.di)*d.qty,roll=Math.random(),night=dayness(hourNow())<.5;
+ delivery:{arrive(m){if(m.data.port){m.hold=true;resolvePort(m).then(()=>{m.hold=false;markDirty()}).catch(e=>{console.warn(e);m.hold=false});return}const d=m.data,D=DIST[d.di],S=G.d[d.di],r=riskInfo(d.di),pos=dpos(d.di),val=unitPrice(d.key,d.q,d.di)*d.qty,roll=Math.random(),night=dayness(hourNow())<.5;
   if(roll<r.pol){const fine=Math.round(val*.35+50);G.money=Math.max(0,G.money-fine);G.heat=Math.min(100,G.heat+8);S.trust=Math.max(0,S.trust-1.5);toast(`🚓 ¡Redada en ${D.n}! Incautan la mercancía y te multan con ${fmt(fine)}.`,'bad');floatText('REDADA','#fb7185',pos)}
   else if(roll<r.pol+r.gang){S.trust=Math.max(0,S.trust-2);let extra='';if(Math.random()<.5){const lost=Math.min(G.money,Math.round(rnd(60,200)));G.money-=lost;extra=` Además te roban ${fmt(lost)}.`}toast(`🔪 Emboscada de ${D.rival} en ${D.n}${night?' (de noche)':''}: pierdes la mercancía.${extra}`,'bad');floatText('EMBOSCADA','#fb7185',pos)}
   else{const rev=revenue(d.qty,unitPrice(d.key,d.q,d.di));gain(Math.round(rev),pos);G.stats.delivered+=d.qty;S.trust=Math.min(100,S.trust+.6+d.qty*.12);G.rep=Math.min(100,G.rep+.4+d.qty*.03);G.heat=Math.min(100,G.heat+d.qty*.8);toast(`✅ Reparto en ${D.n}: ${d.qty}× ${goodName(d.key)} por ${fmt(rev)}`,'ok')}markDirty()},
@@ -680,7 +681,7 @@ const ACT={
  dgo(){const u=UI.deliv,g=G.inv.goods[u.key];if(!g||missionOf('repartidor'))return;{const m=restMsg(['repartidor','vendedor','policia']);if(m)return toast(m,'bad')}const q=g.q,l=lvl('repartidor');takeGoods(u.key,u.qty);
   startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id,roleChar('vendedor').id,roleChar('policia').id],dest:dpos(u.di),speed:5*(1+.14*(l-1)),wait:10,data:{di:u.di,key:u.key,qty:u.qty,q},txt:'Reparto'});
   toast(`🚚 ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} preparan la entrega a ${DIST[u.di].n}`);UI.deliv=null;sfx('click')},
- air(){tapAir()},airrefresh(){loadAir()},raid(d){startRaid(d.u)},
+ pq(d){UI.pq=d.v==='max'?9999:Math.max(1,(UI.pq||1)+(+d.v))},psend(){sendPort()},air(){tapAir()},airrefresh(){loadAir()},raid(d){startRaid(d.u)},
  async ransom(){const k=G.kidnap;if(!k||G.money<k.ransom)return;
   if(k.pvp){if(!supabase||!USER||USER.guest||!online())return toast('Necesitas conexión para pagar el rescate al jugador defensor','bad');
    const r=await insertEvent({target:k.target,attacker:USER.username,kind:'ransom',money:k.ransom,items:{}});if(!r.ok)return toast('No se pudo registrar el pago del rescate. Inténtalo de nuevo.','bad');
@@ -765,7 +766,7 @@ function shZone(zi){const Z=ZN[zi],sc=G.zones[zi].scouted;let h='';
   Object.entries(Z.pool).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{const I2=ingOf(k);h+=`<div class="row sp" style="margin-bottom:6px"><span style="color:${I2.c};min-width:120px">${I2.n}</span><div class="grow">${`<div class="bar"><i style="width:${v/tot*100}%;background:${RARC[I2.rar]}"></i></div>`}</div><span class="sub" style="width:44px;text-align:right">${(v/tot*100).toFixed(0)}%</span></div>`});
   h+=`<div class="row mt-3">${[[1,'+1 viaje'],[3,'+3 viajes'],[-1,'∞']].map(([n,t])=>B(t,'wqadd',{d:{z:zi,n},c:'grow btn-g'})).join('')}</div><div class="sub mt-2">Se añaden a la cola del Almacén (${G.wq.length} en cola).</div>`}
  return[Z.n,h]}
-function shDist(di){const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInfo(di),rd=riskInfo(di,13),rn=riskInfo(di,1),known=S.unlocked||S.scouted,bk=bestGood(di);
+function shDist(di){if(DIST[di].port)return shPort();const D=DIST[di],S=G.d[di],tl=trustLabel(S.trust),ri=riskInfo(di),rd=riskInfo(di,13),rn=riskInfo(di,1),known=S.unlocked||S.scouted,bk=bestGood(di);
  let h=`<div class="card"><div class="row sp"><span class="chip ${tl[1]}">${tl[0]} · ${Math.round(S.trust)}</span><span class="chip ${S.unlocked?'ok':'bad'}">${S.unlocked?'Desbloqueado':'Sin desbloquear'}</span></div>${bar('tr:'+di,S.trust<30?'#ef4444':S.trust<60?'#f59e0b':'#22c55e')}
  <div class="sub mt-2">${known?`Precio base ×${D.price.toFixed(2)}${di?` · banda rival: ${D.rival}`:''}`:'Sin ojear: precios y riesgos aproximados.'}</div>
  <div class="sub mt-1">Riesgo ahora: <b class="${ri.total>.35?'bad':'warn'}">${Math.round(ri.total*100)}%</b> · ☀ día: policía ${Math.round(rd.pol*100)}% / bandas ${Math.round(rd.gang*100)}% · 🌙 noche: policía ${Math.round(rn.pol*100)}% / bandas ${Math.round(rn.gang*100)}%</div></div>`;
@@ -968,6 +969,163 @@ async function pollEvents(){
  }catch(e){console.warn('[La Tinto] eventos',e)}
  polling=false;if(n)saveGame(false)}
 function kidCheck(){const cdNow=raidCdLeft()>0;if(UI.cdWas&&!cdNow)markDirty();UI.cdWas=cdNow;const k=G.kidnap;if(k&&k.pvp&&Date.now()>=k.until){G.kidnap=null;ich[k.id].vis=false;toast('⛓ Alejo ha escapado tras 2 horas de cautiverio y vuelve a La Tinto.','ok');markDirty();saveGame(false)}}
+/* ====================== PUERTO CLANDESTINO · ADUANA GLOBAL ====================== */
+const PORT_SPOT=new V3(-118,0,0),PORT_TOLL=3000,PORT_MULT=3.5,PORT_OPEN_H=15,PORT_CLOSE_H=23;
+let portLabel=null,portShip=null,srvOff=0;
+const nowSrv=()=>Date.now()+srvOff;
+const madFmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function madParts(ms){const p={};madFmt.formatToParts(new Date(ms)).forEach(x=>{if(x.type!=='literal')p[x.type]=x.value});return{y:+p.year,mo:+p.month,d:+p.day,h:(+p.hour)%24,mi:+p.minute,s:+p.second}}
+const dayStr=(y,mo,d)=>`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+const EPOCH=Date.UTC(2025,0,1);
+const dayNum=ds=>{const a=ds.split('-').map(Number);return Math.round((Date.UTC(a[0],a[1]-1,a[2])-EPOCH)/864e5)};
+const numDay=n=>{const t=new Date(EPOCH+n*864e5);return dayStr(t.getUTCFullYear(),t.getUTCMonth()+1,t.getUTCDate())};
+const prevDayStr=ds=>numDay(dayNum(ds)-1);
+const hms=ms=>{const t=Math.max(0,Math.floor(ms/1000));return[Math.floor(t/3600),Math.floor(t%3600/60),t%60].map(x=>String(x).padStart(2,'0')).join(':')};
+/* Horario fijo (hora de España): abierto 15:00–23:00. "day" = jornada (si está cerrado, la última jornada terminada) */
+function portState(ms){const p=madParts(ms===undefined?nowSrv():ms),secs=p.h*3600+p.mi*60+p.s,O=PORT_OPEN_H*3600,C=PORT_CLOSE_H*3600,today=dayStr(p.y,p.mo,p.d);
+ if(secs>=O&&secs<C)return{open:true,day:today,toClose:(C-secs)*1000,toOpen:0};
+ return{open:false,day:secs>=C?today:prevDayStr(today),toOpen:(secs<O?O-secs:86400-secs+O)*1000,toClose:0}}
+/* Contrato diario determinista (igual para todos los jugadores): cepa + elaborado exacto + calidad mínima + cuota 300–500, nunca igual al de ayer */
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function pickCombo(seed){const rng=mulberry(hashStr('latinto-port|'+seed)),items=[];let tot=0;
+ STR.forEach((S,si)=>REC.forEach(R=>{const w=1/(R.minLvl*(1+si*.8));items.push([S,R,w]);tot+=w}));
+ let r=rng()*tot,ch=items[0];for(const it of items){r-=it[2];if(r<=0){ch=it;break}}
+ return{S:ch[0],R:ch[1],minQ:70+5*Math.floor(rng()*6),quota:300+10*Math.floor(rng()*21)}}
+const _cc=[];
+function contractN(n){if(_cc[n])return _cc[n];let st=n;while(st>0&&!_cc[st-1])st--;
+ for(let k=st;k<=n;k++){const p=k>0?_cc[k-1]:null;let c=pickCombo(numDay(k));for(let i=1;p&&c.S.id===p.S.id&&c.R.id===p.R.id&&i<60;i++)c=pickCombo(numDay(k)+'#'+i);_cc[k]=c}return _cc[n]}
+function portContract(day){const c=contractN(Math.max(0,dayNum(day)));return{day,strain:c.S,rec:c.R,key:c.S.id+'|'+c.R.id,minQ:c.minQ,quota:c.quota}}
+const portBase=(c,q)=>c.strain.base*c.rec.mult*(.55+q/100*.75);
+/* Solo policía: riesgo = (5 % + 40 % × cuota llena) reducido por el nivel de Garmón. Sin bandas. */
+const portRisk=fill=>Math.min(.9,(.05+.40*clamp(fill,0,1))*polRed(lvl('policia')));
+/* ---- estadísticas globales (Supabase: latinto_port) ---- */
+let PORT={day:null,ok:false,by:[],total:0,paid:0,bonus:null,err:'',at:0};
+async function fetchPort(day){
+ const r=await withTimeout(supabase.from('latinto_port').select('username,units,paid,kind').eq('day',day).limit(5000),9000);if(r.error)throw r.error;
+ const by={};let total=0,paid=0,bonus=null;
+ (r.data||[]).forEach(x=>{if(x.kind==='bonus'){bonus={u:x.username,paid:+x.paid||0};return}const n=+x.units||0;if(n<=0)return;by[x.username]=(by[x.username]||0)+n;total+=n;paid+=(+x.paid||0)});
+ return{day,ok:true,by:Object.entries(by).map(e=>({u:e[0],n:e[1]})).sort((a,b)=>b.n-a.n||a.u.localeCompare(b.u)),total,paid,bonus,err:'',at:Date.now()}}
+async function loadPortStats(day){
+ if(!supabase||!online()){PORT.err='sin conexión';return false}
+ try{PORT=await fetchPort(day);return true}catch(e){PORT.err=String(e&&e.message||e);return false}}
+async function refreshPortSheet(){await loadPortStats(portState().day);if(SH.type==='dist'&&SH.arg===9)renderSheet()}
+async function syncServerTime(){if(typeof fetch!=='function'||!supabase||!online())return;
+ try{const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),5000);const r=await fetch(SUPABASE_URL+'/rest/v1/latinto_profiles?select=username&limit=1',{method:'HEAD',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY},signal:ctl.signal});clearTimeout(to);
+  const d=r.headers.get('date'),ms=d?Date.parse(d):NaN;if(!isNaN(ms)&&Math.abs(ms-Date.now())<864e5)srvOff=ms-Date.now()}catch(e){}}
+let portChan=null;
+function startPortRealtime(){if(portChan||!supabase||!supabase.channel)return;try{portChan=supabase.channel('latinto-port').on('postgres_changes',{event:'INSERT',schema:'public',table:'latinto_port'},()=>{if(Date.now()-PORT.at>2000)refreshPortSheet()}).subscribe()}catch(e){console.warn(e)}}
+/* Bono al mayor aportador de la última jornada terminada: lo reclama su propio cliente (un solo bono por día) */
+async function claimBonus(day,info){
+ const top=info.by[0];G.portClaimed=G.portClaimed||{};
+ if(!top||top.u!==USER.username||G.portClaimed[day])return;
+ if(info.bonus){if(info.bonus.u===USER.username)G.portClaimed[day]=true;return}
+ const money=Math.max(1000,Math.round(info.paid*.10));
+ const r=await withTimeout(supabase.from('latinto_port').insert({day,username:USER.username,units:0,paid:money,kind:'bonus'}),9000);
+ if(r.error){console.warn('[La Tinto] bono no concedido',r.error);return}
+ G.portClaimed[day]=true;G.money+=money;G.stats.earned+=money;G.rep=Math.min(100,G.rep+3);
+ toast(`🏆 ¡Eres el mayor aportador de la aduana (${day})! Bono: ${fmt(money)} y +3 de reputación.`,'ok');sfx('coin');saveGame(false)}
+async function portTick(){
+ if(!supabase||!USER||USER.guest||!G||!online())return;
+ try{const st=portState();await loadPortStats(st.day);
+  const done=st.open?prevDayStr(st.day):st.day;
+  if(!(G.portClaimed&&G.portClaimed[done])){const info=(PORT.day===done&&PORT.ok)?PORT:await fetchPort(done);await claimBonus(done,info)}
+ }catch(e){console.warn('[La Tinto] aduana',e)}}
+/* ---- envío a la aduana ---- */
+function portBlock(){const st=portState();
+ if(!supabase||!USER||USER.guest)return 'Necesitas una cuenta para aportar a la aduana.';
+ if(!online())return 'Necesitas conexión a internet.';
+ if(!st.open)return '⚓ La aduana está cerrada.';
+ if(st.toClose<180000)return 'La aduana cierra en menos de 3 minutos.';
+ const c=portContract(st.day),g=G.inv.goods[c.key];
+ if(!g||g.qty<1)return 'No tienes el elaborado exacto que se pide hoy.';
+ if(g.q<c.minQ)return `Tu lote tiene calidad ${Math.round(g.q)}: se exige ${c.minQ}+.`;
+ if(PORT.day===st.day&&PORT.total>=c.quota)return 'La cuota global de hoy ya está completa.';
+ if(G.money<PORT_TOLL)return `Necesitas ${fmt(PORT_TOLL)} para el peaje.`;
+ if(missionOf('repartidor'))return 'El equipo de reparto ya está de camino.';
+ return restMsg(['repartidor','vendedor','policia'])}
+function sendPort(){const b=portBlock();if(b)return toast(b,'bad');
+ const st=portState(),c=portContract(st.day),g=G.inv.goods[c.key],rem=c.quota-(PORT.day===st.day?PORT.total:0),qty=clamp(UI.pq||1,1,Math.max(1,Math.min(g.qty,rem))),q=g.q,l=lvl('repartidor');
+ takeGoods(c.key,qty);G.money-=PORT_TOLL;
+ startMission({type:'delivery',role:'repartidor',chars:[roleChar('repartidor').id,roleChar('vendedor').id,roleChar('policia').id],dest:PORT_SPOT.clone(),speed:5*(1+.14*(l-1)),wait:10,data:{port:true,day:st.day,key:c.key,qty,q,toll:PORT_TOLL},txt:'Envío a la aduana'});
+ toast(`⚓ ${nm('repartidor')}, ${nm('vendedor')} y ${nm('policia')} salen hacia la aduana con ${qty} uds (peaje ${fmt(PORT_TOLL)}).`);sfx('click');saveGame(false)}
+async function resolvePort(m){
+ const d=m.data,back=why=>{addGoods(d.key,d.qty,d.q);G.money+=d.toll;toast(why,'warn')};
+ try{
+  const st=portState();
+  if(!st.open||st.day!==d.day){back('⚓ La aduana cerró antes de que llegara el camión: carga y peaje devueltos.');return}
+  if(!await loadPortStats(d.day))throw new Error(PORT.err||'sin datos');
+  const c=portContract(d.day),rem=c.quota-PORT.total;
+  if(rem<=0){back('⚓ La cuota global de hoy ya estaba completa: carga y peaje devueltos.');return}
+  if(Math.random()<portRisk(PORT.total/c.quota)){
+   const fine=Math.round(Math.max(500,d.qty*portBase(c,d.q)*PORT_MULT*.3));G.money=Math.max(0,G.money-fine);G.heat=Math.min(100,G.heat+12);
+   toast(`🚓 ¡Control policial aduanero! Pierdes la carga y te multan con ${fmt(fine)}. Calor +12.`,'bad');floatText('INTERCEPTADO','#fb7185',dpos(9));return}
+  const acc=Math.min(d.qty,rem),paid=Math.round(acc*portBase(c,d.q)*PORT_MULT);
+  const ins=await withTimeout(supabase.from('latinto_port').insert({day:d.day,username:USER.username,units:acc,paid,kind:'delivery'}),9000);if(ins.error)throw ins.error;
+  if(acc<d.qty)addGoods(d.key,d.qty-acc,d.q);
+  gain(paid,dpos(9));G.stats.delivered+=acc;G.rep=Math.min(100,G.rep+.3+acc*.02);G.heat=Math.min(100,G.heat+acc*.2);
+  toast(`⚓ Entrega aceptada: ${acc} uds por ${fmt(paid)}${acc<d.qty?` (cuota casi llena: ${d.qty-acc} uds devueltas)`:''}.`,'ok');
+  loadPortStats(d.day)
+ }catch(e){console.warn('[La Tinto] aduana',e);back('⚓ No se pudo registrar la entrega en la aduana (conexión). Carga y peaje devueltos.')}
+ finally{saveGame(false)}}
+/* ---- hoja del Distrito Oeste ---- */
+function shPort(){
+ const st=portState(),c=portContract(st.day),open=st.open,loaded=PORT.day===st.day&&PORT.ok,usr=USER&&!USER.guest?USER.username:null;
+ let h=`<div class="card" style="border-color:${open?'var(--ok)':'var(--bad)'}"><div class="row sp"><span class="chip ${open?'ok':'bad'}">${open?'⚓ ABIERTO · 15:00 – 23:00':'⚓ CERRADO'}</span><span class="sub">hora de España</span></div>`;
+ h+=open?`<div class="sub mt-2">Cierra en <b class="warn" data-bt="pc:0"></b></div>`:`<div class="hd mt-2" style="font-size:24px">Abre en <span class="warn" data-bt="pc:0"></span></div><div class="sub mt-1">Cada día de 15:00 a 23:00 con un pedido nuevo. Hasta entonces no se puede enviar carga.</div>`;
+ h+=`</div><div class="sub mb-2">🚓 En esta ruta no actúan las bandas: la única amenaza son los controles policiales aduaneros.</div>`;
+ if(open){
+  const fill=loaded?PORT.total/c.quota:0,risk=portRisk(fill);
+  h+=`<div class="card" style="border-color:rgba(255,179,71,.65)"><div class="hd" style="font-size:18px">📦 Pedido de hoy</div><div class="mt-1"><b>${c.rec.n}</b> de <b style="color:${c.strain.c}">${c.strain.n}</b></div>
+  <div class="sub">Calidad mínima <b>${c.minQ}+</b> · Pago ×${PORT_MULT} del valor base · Peaje ${fmt(PORT_TOLL)} por envío</div>
+  <div class="sub mt-2">Cuota global: <b>${loaded?PORT.total:0} / ${c.quota} uds</b> (<span class="warn">${Math.min(100,fill*100).toFixed(1)}%</span>)</div>${bar('pf:0','#4ade80')}
+  <div class="sub mt-2">🚓 Riesgo de control policial: <b class="${risk>.3?'bad':'warn'}">${Math.round(risk*100)}%</b> · sube con la cuota llena y baja con el nivel de ${nm('policia')}</div></div>`;
+  const g=G.inv.goods[c.key],blk=portBlock();h+=`<div class="card"><div class="hd mb-2" style="font-size:17px">🚢 Tu envío</div>`;
+  if(!g)h+=`<div class="sub">No tienes <b>${c.rec.n} · ${c.strain.n}</b> en el almacén. Elabóralo en el laboratorio con esa cepa.</div>`;
+  else{const rem=Math.max(0,c.quota-(loaded?PORT.total:0)),maxQ=Math.max(1,Math.min(g.qty,rem));UI.pq=clamp(UI.pq||Math.min(10,maxQ),1,maxQ);
+   const pay=UI.pq*portBase(c,g.q)*PORT_MULT,okQ=g.q>=c.minQ;
+   h+=`<div class="sub mb-2">Tienes <b>${g.qty}</b> uds · calidad <b class="${okQ?'ok':'bad'}">${Math.round(g.q)}</b>${okQ?'':` (se exige ${c.minQ}+)`}</div>
+   <div class="row mb-2"><button class="btn" data-act="pq" data-v="-10">−10</button><button class="btn" data-act="pq" data-v="-1">−1</button><b class="hd grow" style="text-align:center;font-size:22px">${UI.pq} uds</b><button class="btn" data-act="pq" data-v="1">+1</button><button class="btn" data-act="pq" data-v="10">+10</button></div>
+   <button class="btn w-full mb-2" data-act="pq" data-v="max">Máximo (${maxQ})</button>
+   <div class="sub">Pago estimado <b class="ok">${fmt(pay)}</b> − peaje ${fmt(PORT_TOLL)} = <b class="${pay-PORT_TOLL>0?'ok':'bad'}">${fmt(pay-PORT_TOLL)}</b></div>`}
+  h+=(blk?`<div class="sub warn mt-2">${esc(blk)}</div>`:'')+B('🚢 Enviar cargamento','psend',{c:'btn-p w-full mt-2',dis:!!blk})+'</div>'}
+ else if(loaded){h+=`<div class="card"><div class="hd" style="font-size:17px">Jornada ${st.day}</div><div class="sub mt-1">Pedido: <b>${c.rec.n}</b> de ${c.strain.n} (Cal. ${c.minQ}+) · cuota ${c.quota} uds · entregadas ${PORT.total}</div></div>`}
+ h+=`<div class="hd mt-3 mb-2" style="font-size:17px">📊 Aportaciones de ${open?'hoy':'la última jornada'}</div>`;
+ if(!loaded)h+=PORT.err?`<div class="sub warn">No se pudo leer la tabla <b>latinto_port</b> (${esc(PORT.err)}). Comprueba que existe y permite leer con la clave anon.</div>`:'<div class="sub">Cargando…</div>';
+ else if(!PORT.by.length)h+='<div class="sub">Todavía nadie ha entregado carga.</div>';
+ else{const tot=PORT.total||1;
+  h+=`<div class="card" style="padding:6px 10px"><div style="display:grid;grid-template-columns:36px 1fr 64px 56px;gap:6px;font-size:11px;color:var(--mut);padding:2px 0"><span>#</span><span>Jugador</span><span style="text-align:right">%</span><span style="text-align:right">Uds</span></div>`+
+  PORT.by.slice(0,20).map((r,i)=>`<div style="display:grid;grid-template-columns:36px 1fr 64px 56px;gap:6px;padding:5px 0;border-top:1px solid var(--line);font-size:13px;${r.u===usr?'color:var(--acc2);font-weight:700':''}"><span>${!open&&i===0?'🏆':i+1}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.u)}${r.u===usr?' (tú)':''}</span><b style="text-align:right">${(r.n/tot*100).toFixed(1)}%</b><span style="text-align:right">${r.n}</span></div>`).join('')+'</div>';
+  if(!open)h+=PORT.bonus?`<div class="sub ok">🏆 Bono entregado a <b>${esc(PORT.bonus.u)}</b>: ${fmt(PORT.bonus.paid)} y +3 de reputación.</div>`:`<div class="sub warn">🏆 Bono pendiente: lo reclamará <b>${esc(PORT.by[0].u)}</b> al conectarse.</div>`}
+ h+=`<div class="sub mt-2">Al cierre de las 23:00, quien haya aportado el mayor porcentaje recibe un bono: +3 de reputación y el 10 % del pago total de la jornada (mín. 1.000 €).</div>`;
+ return['⚓ Puerto Clandestino · Aduana',h]}
+/* ---- cartel 3D flotante: estado en tiempo real ---- */
+let portLblKey='';
+function updatePortLabel(){if(!portLabel)return;const sec=Math.floor(nowSrv()/1000),k=sec+'|'+PORT.total+'|'+PORT.day;if(k===portLblKey)return;portLblKey=k;
+ const st=portState();let txt,bg;
+ if(st.open){const c=portContract(st.day),f=PORT.day===st.day?PORT.total:0;txt=`⚓ ADUANA ABIERTA · cierra en ${hms(st.toClose)}\nPide: ${c.rec.n} · ${c.strain.n} (Cal. ${c.minQ}+)\nCargado: ${(Math.min(100,f/c.quota*100)).toFixed(1)}% (${f}/${c.quota} uds)`;bg='rgba(14,110,150,.95)'}
+ else{txt=`⚓ ADUANA CERRADA\nAbre en ${hms(st.toOpen)}\nHorario: 15:00 – 23:00 (hora de España)`;bg='rgba(95,40,60,.95)'}
+ setLabel(portLabel,txt,'#fff',bg)}
+/* ---- modelo 3D del puerto, en el extremo oeste ---- */
+function buildPort(){
+ const g=new THREE.Group();scene.add(g);const tg=m=>{m.userData={kind:'district',di:9};cityClick.push(m);return m};
+ const sea=new THREE.Mesh(new THREE.PlaneGeometry(600,1000),new THREE.MeshStandardMaterial({color:'#0e4d7a',roughness:.25,metalness:.2,transparent:true,opacity:.93}));sea.rotation.x=-Math.PI/2;sea.position.set(-452,-.02,0);g.add(sea);
+ tg(box(42,.4,92,M('#8b8f96',{roughness:.95}),-131,.2,0,g,false));box(.6,.45,92,M('#e0b020'),-151.7,.25,0,g,false);
+ const nn=nearestNode(PORT_SPOT),dx=PORT_SPOT.x-nn.x,dz=PORT_SPOT.z-nn.z,len=Math.hypot(dx,dz),pg=new THREE.Group(),pl=new THREE.Mesh(new THREE.PlaneGeometry(len,6),M('#2b2b33',{roughness:1}));pl.rotation.x=-Math.PI/2;pg.add(pl);pg.rotation.y=-Math.atan2(dz,dx);pg.position.set((PORT_SPOT.x+nn.x)/2,.03,(PORT_SPOT.z+nn.z)/2);g.add(pg);
+ const cols=['#c0392b','#2e86c1','#27ae60','#d68910','#7d3c98','#e5e7eb','#16a085'],rand=mulberry(99);
+ [[-38,-14],[14,38]].forEach(zr=>{for(let cx=0;cx<4;cx++)for(let cz=zr[0];cz<=zr[1];cz+=3.4){if(rand()<.15)continue;const hgt=1+Math.floor(rand()*3),col=cols[Math.floor(rand()*cols.length)];
+  for(let k=0;k<hgt;k++)tg(box(2.6,2.5,6,M(col),-146+cx*6.5,1.45+k*2.55,cz,g))}});
+ const red=M('#d62d4a'),wh=M('#e8e8ee');
+ [[-152,5],[-152,11],[-141,5],[-141,11]].forEach(a=>tg(box(1,14,1,red,a[0],7.2,a[1],g)));tg(box(14,1.5,8,wh,-146.5,14.6,8,g));tg(box(3,2.4,3,red,-146.5,12.4,8,g));box(.15,8,.15,M('#333'),-150,10,8,g,false);
+ portShip=new THREE.Group();portShip.position.set(0,0,0);g.add(portShip);
+ tg(box(14,4,40,M('#2c3e50'),-163,1.4,8,portShip));
+ const bow=new THREE.Mesh(new THREE.ConeGeometry(7.2,9,4),M('#2c3e50'));bow.rotation.set(Math.PI/2,Math.PI/4,0);bow.position.set(-163,1.4,32.5);tg(bow);portShip.add(bow);
+ tg(box(10,6,8,wh,-163,6.4,-8,portShip));tg(box(8,3,5,M('#9ecbff',{roughness:.2}),-163,10.9,-8,portShip));cyl(1.2,1.2,4,red,-163,9.5,-1.5,portShip,10);
+ for(let i=0;i<9;i++)tg(box(2.6,2.5,6,M(cols[i%cols.length]),-165+(i%2)*4.4,3.8,6+Math.floor(i/2)*7.2,portShip));
+ tg(box(8,5,6,M('#4a5568'),-116,2.5,-9,g));tg(box(8.8,.5,6.8,M('#2a3342'),-116,5.2,-9,g));box(.15,.2,6,M('#e8e8ee'),-114,1.4,-3.2,g,false).rotation.z=.3;
+ const sg=new THREE.Mesh(new THREE.PlaneGeometry(6,1.7),neonBasic({map:textTex('ADUANA','#38bdf8',512,150,84)}));sg.position.set(-111.8,3.4,-9);sg.rotation.y=Math.PI/2;g.add(sg);tg(sg);
+ for(let z=-40;z<=40;z+=10){cyl(.12,.12,5,M('#2a2a38'),-150,2.5,z,g,6);const b=new THREE.Mesh(new THREE.SphereGeometry(.4,8,6),lampM);b.position.set(-150,5.1,z);g.add(b);addGlow(g,-150,5.2,z,'#ffd58a',6,'night')}
+ addGlow(g,-111.5,3.4,-9,'#38bdf8',8,'neon');
+ portLabel=makeLabel('',{w:780,h:200,font:31,scale:[21,5.4]});portLabel.position.set(-122,16,-2);g.add(portLabel);bobs.push({s:portLabel,y0:16,di:'port',ph:5});updatePortLabel()}
 function shSettings(){const guest=USER&&USER.guest,cl={ok:'☁ Sincronizado',busy:'☁ Sincronizando…',err:'⚠ Error de nube: se guarda en local',off:guest?'💾 Solo en este dispositivo':'📴 Sin conexión: se guarda en local'}[cloudState]||'';
  return['Ajustes',`<div class="card"><div class="row sp"><b class="hd" style="font-size:17px">👤 ${esc(USER?USER.username:'—')}</b><span class="chip ${cloudState==='ok'?'ok':cloudState==='err'?'bad':'warn'}">${cl}</span></div><div class="sub mt-1">Autoguardado cada 10 s en el dispositivo${guest?'.':' y en la nube.'}</div></div>
  <div class="grid2">${B('❓ Tutorial','tut')}${B('💾 Guardar ahora','save')}${B(UI.mute?'🔇 Sonido apagado':'🔊 Sonido activo','mute')}${B('🚪 Cerrar sesión','logout')}</div>${B('🏆 Clasificación online','rank',{c:'btn-o w-full mt-2'})}${B('🗑 Nueva partida','newgame',{c:'btn-r w-full mt-2'})}
@@ -977,8 +1135,8 @@ function renderSheet(){if(!G||!SH.type)return;let r;
  const body=$('#sh-body'),sc=body.scrollTop;$('#sh-title').textContent=r[0];body.innerHTML=r[1];body.scrollTop=sc;renderStrip();updateBinds()}
 function renderStrip(){if(!G)return;const ic={expedition:'🚗',delivery:'🚚',scout:'👁',assault:'🏍',raid:'✈'};
  $('#mstrip').innerHTML=G.missions.map(m=>`<div class="ms"><div class="row sp"><span>${ic[m.type]} ${m.txt}</span><span data-bt="mp:${m.role}" style="color:var(--mut)"></span></div>${bar('ms:'+m.role,m.type==='assault'?'#fb7185':'#2dd4bf')}</div>`).join('')+(G.kidnap?`<div class="ms" style="border-color:var(--bad)">⛓ ${charById(G.kidnap.id).n} secuestrado${G.kidnap.pvp?' · <span data-bt="kt:0"></span>':''}</div>`:'')}
-function pctOf(k){const[a,b]=k.split(':');switch(a){case'pg':{const p=G.plots[+b];return p.state==='ready'?100:p.growth*100}case'pw':return G.plots[+b].water;case'ms':{const m=missionOf(b);return m&&!m.pre?clamp(m.t/(2*m.d/m.speed+m.wait),0,1)*100:0}case'q':return(G.tabs[+b]?G.tabs[+b].p:0)*100;case'tr':return G.d[+b].trust}return 0}
-function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}if(a==='rc'){const ms=raidCdLeft();return ms>0?fmtCd(ms):'ya'}if(a==='kt'){const k=G.kidnap;if(!k||!k.pvp)return'';const ms=k.until-Date.now();if(ms<=0)return'ya';return Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s'}return''}
+function pctOf(k){const[a,b]=k.split(':');switch(a){case'pg':{const p=G.plots[+b];return p.state==='ready'?100:p.growth*100}case'pw':return G.plots[+b].water;case'ms':{const m=missionOf(b);return m&&!m.pre?clamp(m.t/(2*m.d/m.speed+m.wait),0,1)*100:0}case'q':return(G.tabs[+b]?G.tabs[+b].p:0)*100;case'pf':{const st=portState(),c=portContract(st.day);return PORT.day===st.day?Math.min(100,PORT.total/c.quota*100):0}case'tr':return G.d[+b].trust}return 0}
+function txtOf(k){const[a,b]=k.split(':');if(a==='mp'){const m=missionOf(b);return m?m.pre?'Preparando':['Yendo','Actuando','Volviendo'][phaseOf(m)]:''}if(a==='lq'){if(!G.tabs[+b])return'';const izo=ich[roleChar('tecnico').id];return izo.vis&&izo.g.position.x>13.2?'Elaborando…':`${nm('tecnico')} va al laboratorio…`}if(a==='pc'){const st=portState();return hms(st.open?st.toClose:st.toOpen)}if(a==='rc'){const ms=raidCdLeft();return ms>0?fmtCd(ms):'ya'}if(a==='kt'){const k=G.kidnap;if(!k||!k.pvp)return'';const ms=k.until-Date.now();if(ms<=0)return'ya';return Math.floor(ms/3.6e6)+'h '+Math.floor(ms%3.6e6/6e4)+'m '+Math.floor(ms%6e4/1e3)+'s'}return''}
 function updateBinds(){$$('[data-bp]').forEach(e=>e.style.width=pctOf(e.dataset.bp)+'%');$$('[data-bt]').forEach(e=>e.textContent=txtOf(e.dataset.bt))}
 function phaseOfDay(h){return h>=5&&h<8?['🌅','Amanecer']:h>=8&&h<18?['☀️','Día']:h>=18&&h<21?['🌇','Atardecer']:['🌙','Noche']}
 function updateHud(){if(!G)return;$('#hMoney').textContent=fmt(G.money);const h=hourNow(),ph=phaseOfDay(h),dn=dayness(h);
@@ -1031,7 +1189,7 @@ renderer.domElement.addEventListener('pointerup',e=>{if(!pd||!G||!started||busyC
  const h=pick(e);if(!h){return}const u=h.object.userData;sfx('click');
  if(mode==='city'){if(u.kind==='tinto')enterTinto();else if(u.kind==='wh')openSheet('wh');else if(u.kind==='air')tapAir();else if(u.kind==='zone')openSheet('zone',u.i);else if(u.kind==='district')selectDistrict(u.di)}
  else{if(u.kind==='plot')openSheet('plot',u.i);else if(u.kind==='lab')openSheet('lab');else if(u.kind==='char')openSheet('char',u.id)}});
-function selectDistrict(i){UI.selD=i;const D=DIST[i];selFrame.visible=true;selFrame.position.set(D.gx*38,0,D.gz*38);openSheet('dist',i)}
+function selectDistrict(i){UI.selD=i;const D=DIST[i];if(D.port){selFrame.visible=false;openSheet('dist',i);refreshPortSheet();return}selFrame.visible=true;selFrame.position.set(D.gx*38,0,D.gz*38);openSheet('dist',i)}
 /* Evita que la hoja se redibuje mientras el dedo está pulsando (botones que no respondían) */
 $('#sheet').addEventListener('pointerdown',()=>{UI.press=true});
 ['pointerup','pointercancel'].forEach(ev=>addEventListener(ev,()=>{setTimeout(()=>{UI.press=false},60)}));
@@ -1123,7 +1281,7 @@ async function syncCloud(){
  return res}
 async function saveGame(manual){if(!G||!USER)return;saveLocal();const r=await syncCloud();
  if(manual)toast(r==='ok'?'☁ Partida guardada en la nube':r==='local'?'💾 Guardada en este dispositivo':'💾 Guardada en este dispositivo (la nube no responde)',r==='ok'?'ok':'warn')}
-let pollN=0;setInterval(()=>{if(G&&started&&USER){saveGame(false);if(++pollN%3===0)pollEvents()}},10000);
+let pollN=0;setInterval(()=>{if(G&&started&&USER){saveGame(false);if(++pollN%3===0){pollEvents();portTick()}if(SH.type==='dist'&&SH.arg===9)refreshPortSheet()}},10000);
 addEventListener('online',()=>{if(G&&started&&USER){saveGame(false);pollEvents()}else setCloud('off')});
 addEventListener('offline',()=>setCloud('off'));
 addEventListener('beforeunload',()=>{if(G&&started)saveLocal()});
@@ -1183,7 +1341,7 @@ async function enterGame(user,prefetched){
   catch(e){console.warn('[La Tinto] sin acceso a la nube, se usa la copia local',e);setCloud('err')}}
  else setCloud('off');
  const best=[local,remote].filter(Boolean).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0))[0];
- if(best){G=best;saveLocal();startGame(null,best);setTimeout(()=>saveGame(false),2500);setTimeout(pollEvents,3500)}
+ if(best){G=best;saveLocal();startGame(null,best);setTimeout(()=>saveGame(false),2500);setTimeout(pollEvents,3500);setTimeout(portTick,5000);syncServerTime();startPortRealtime()}
  else showSelect(boss=>{newGame(boss);saveLocal();startGame(null,G);saveGame(false)},'Empezar como Boss',user.guest?null:()=>{try{localStorage.removeItem(USER_KEY)}catch(e){}USER=null;showAuth()})}
 function startFlow(){const u=getLocalUser();if(u)enterGame(u);else showAuth()}
 function showSelect(onPick,label,onBack){let chosen=null;
@@ -1197,7 +1355,7 @@ function showSelect(onPick,label,onBack){let chosen=null;
  const gb=$('#goBtn');if(gb)gb.onclick=()=>{if(chosen)onPick(chosen)};const bb=$('#backBtn');if(bb)bb.onclick=onBack};
  render()}
 function startGame(bossId,load){
- if(load&&typeof load==='object'){G=load;if(G.v!==2){G=null;toast('Partida incompatible','bad');return}G.wq=G.wq||[];G.labTables=G.labTables||1;G.brk=G.brk||{};G.tabs=G.tabs||[null,null,null];G.zones=G.zones||ZN.map(()=>({scouted:false}))}else newGame(bossId);
+ if(load&&typeof load==='object'){G=load;if(G.v!==2){G=null;toast('Partida incompatible','bad');return}G.wq=G.wq||[];while(G.d.length<DIST.length)G.d.push({trust:100,unlocked:true,scouted:true});G.portClaimed=G.portClaimed||{};G.labTables=G.labTables||1;G.brk=G.brk||{};G.tabs=G.tabs||[null,null,null];G.zones=G.zones||ZN.map(()=>({scouted:false}))}else newGame(bossId);
  $('#sel').style.display='none';started=true;controls.autoRotate=false;
  for(let i=0;i<9;i++)buildDistrict(i);ZN.forEach((_,i)=>refreshZone(i));updateFrames();refreshLabels();placeChars();updateLighting();markDirty();updateHud();updateChrome();
  const v=cityView();tweenCam(v.pos,v.tg,1600);
@@ -1255,7 +1413,7 @@ function updateCity(rdt,t){
   const names=m.chars.map(id=>charById(id).n).join(' + '),st=['En camino','Actuando…','Volviendo'][ph];
   if(o.userData.label&&m.type!=='assault')setLabel(o.userData.label,`${names}\n${st}`);
   if(veh&&moving&&emit){const ex=o.userData.exhaust,a=o.userData.ang||0,c=Math.cos(a),s=Math.sin(a);spawnFx(p.x+ex[0]*c+ex[2]*s,ex[1],p.z-ex[0]*s+ex[2]*c,rnd(-.3,.3),rnd(.5,1),rnd(-.3,.3),m.type==='assault'?'#9ca3af':'#6b7280',m.type==='assault'?.8:1.1,1.2,{grow:1.8,add:false,op:.45})}});
- updatePlane(G.missions.find(x=>x.type==='raid'&&!x.pre),t,rdt);updateAirLabel();
+ updatePlane(G.missions.find(x=>x.type==='raid'&&!x.pre),t,rdt);updateAirLabel();updatePortLabel();if(portShip)portShip.position.y=Math.sin(t*.8)*.18;
  if(tintoMat)tintoMat.emissiveIntensity=.06+NF*(.9+Math.sin(t*2)*.15);if(beam){beam.visible=NF>.06;beam.material.opacity=NF*(.4+Math.sin(t*1.6)*.06)}bobs.forEach(b=>{b.s.position.y=b.y0+Math.sin(t*3+b.ph)*.45});
  if(selFrame.visible)selFrame.children.forEach(m=>m.scale.y=1+Math.sin(t*4)*.2);
  ZN.forEach((Z,zi)=>{const c=zoneG[zi].userData.crystal;if(c){c.rotation.y=t*.8;c.position.y=3+Z.tier*.4+Math.sin(t*1.5+zi)*.3}})}
